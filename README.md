@@ -4,6 +4,10 @@ A merge of the old separate "Goldberg / ColdClient semi-auto setup" and
 "Uplay R2 semi-auto setup" batch toolkits into one project, built so
 other emulators can be added easily in the future.
 
+## Usage:
+Extract the files to the game's root folder (_Achievement_Enabler.bat should be visible) and run "_Achievement_Enabler.bat" and follow the steps.
+Adapters should be acquired before running the script.
+
 ## Layout
 
 ```
