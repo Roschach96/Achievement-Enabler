@@ -1,0 +1,11 @@
+{
+  "id": "uplay_r1",
+  "name": "Uplay R1 (Ubisoft Connect / upc_r1 loader)",
+  "priority": 25,
+  "detect": {
+    "loader_dll_names": ["upc_r1_loader.dll", "upc_r1_loader64.dll", "uplay_r1_loader.dll", "uplay_r1_loader64.dll"],
+    "is_default": false
+  },
+  "assets_folder_glob": "UplayR1-*",
+  "notes": "Auto-selected when any file named in detect.loader_dll_names is found anywhere in the game folder (search excludes the script's own core/adapters folders). assets_folder_glob points at the 'UplayR1-*' folder that must be placed inside this adapter folder (adapters/uplay_r1/), containing upc_r1.ini/uplay_r1.ini + loader DLL templates. write_config.ps1 fails with a clear error (asking the user to redownload the latest Uplay R1 emulator files) if that folder is missing or incomplete."
+}

@@ -1,0 +1,11 @@
+{
+  "id": "uplay_r2",
+  "name": "Uplay R2 (Ubisoft Connect / upc_r2 loader)",
+  "priority": 20,
+  "detect": {
+    "loader_dll_names": ["upc_r2_loader.dll", "upc_r2_loader64.dll", "uplay_r2_loader.dll", "uplay_r2_loader64.dll"],
+    "is_default": false
+  },
+  "assets_folder_glob": "GoldbergUplayR2-*",
+  "notes": "Auto-selected when any file named in detect.loader_dll_names is found anywhere in the game folder (search excludes the script's own core/adapters folders, so the shipped template pack itself doesn't trigger a false positive). assets_folder_glob points at the 'GoldbergUplayR2-*' folder that must be placed inside this adapter folder (adapters/uplay_r2/), containing upc_r2.ini/uplay_r2.ini + loader DLL templates + achievements_schema_example.json copied by write_config.ps1. write_config.ps1 fails with a clear error (asking the user to redownload the latest Uplay R2 emulator files) if that folder is missing or incomplete."
+}

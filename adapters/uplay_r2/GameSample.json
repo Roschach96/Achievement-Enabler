@@ -1,0 +1,11 @@
+{
+  "name": "GameSample",
+  "appid": "0000000",
+  "platform": "steam",
+  "config_path": "AppData\\Achievements\\configs\\schema\\steam\\0000000",
+  "save_path": "AppData\\GSE Saves\\0000000",
+  "executable": "Game_Launcher.exe",
+  "arguments": "",
+  "process_name": "GameName.exe",
+  "displayName": "Game Name"
+}

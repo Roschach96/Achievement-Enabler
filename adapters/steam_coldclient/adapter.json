@@ -1,0 +1,11 @@
+{
+  "id": "steam_coldclient",
+  "name": "Steam ColdClient (Goldberg Emulator / Steam API)",
+  "priority": 10,
+  "detect": {
+    "loader_dll_names": [],
+    "is_default": true
+  },
+  "assets_folder_glob": null,
+  "notes": "Default/fallback adapter. Selected whenever no other adapter's detect.loader_dll_names are found anywhere in the game folder."
+}
