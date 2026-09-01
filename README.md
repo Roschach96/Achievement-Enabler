@@ -39,10 +39,10 @@ adapters/
     generate_achievement_percentages.ps1
     make_shortcut.ps1
     GameSample.json
-    GoldbergUplayR2-*/       <- you provide this asset pack (7 files, see below)
+    GoldbergUplayR2-*/       <- you provide this asset pack (7 files, see below, search the forum)
   uplay_r1/                  <- Uplay R1 (older Ubisoft emulator version), same structure as Uplay R2
     ...same file list as uplay_r2, adapted for r1 naming...
-    UplayR1-*/               <- you provide this asset pack (6 files, see below)
+    UplayR1-*/               <- you provide this asset pack (6 files, see below, search the forum)
 ```
 
 ## How it works
@@ -181,29 +181,3 @@ the adapter's own folder** (`adapters\<id>\<glob>`).
    blocks in the orchestrator's crack-state pre-flight step.
 
 Nothing else in `AchievementEnabler.bat` needs to change.
-
-## Known gaps / please verify before relying on this
-
-This was assembled and reorganized without a Windows machine to test on.
-Most of it has now been run end-to-end successfully against real games on
-both the Steam ColdClient and Uplay R2 branches, but keep watching console
-output on new games/setups, especially the `uplay_r1` branch and the
-`voices38` route, neither of which has had a confirmed real-world run yet.
-Remaining known gaps:
-
-- **`check_update.py`** still points at the original ColdClient semi-auto
-  forum thread and its `V<n>.7z` version-string format. It will not report
-  real updates for *this* project until you repoint `URL` /
-  `VER_PATTERN` / `CHANGELOG_BLOCK_PATTERN` at wherever you actually publish
-  Achievement Enabler (or just remove the update-check step if you don't
-  need it).
-- The **top-owners background job** and the **update-check background job**
-  both race the rest of the script, exactly like the originals did; the
-  30-second wait before achievement generation is the only synchronization
-  point.
-- `dummy_account.txt` needs to exist next to `AchievementEnabler.bat` before
-  the first run — copy `dummy_account.txt.example` and fill it in.
-- Each adapter's required-asset-pack check (`write_config.ps1`) uses a
-  PowerShell `Where-Object | .Count` pattern that can misbehave if exactly
-  one file is missing, the same class of bug that was found and fixed in
-  `select_adapter.ps1`'s default-adapter check. Not yet audited/fixed here.
