@@ -18,7 +18,7 @@ core/
     update_top_owners.py          <- Tries to create a list of profiles with newest games so achievement info can be collected
     check_update.py               <- self-update notifier (see note below)
 adapters/
-  steam_coldclient/               <- Steam ColdClient (Goldberg Steam emulator fork by Detanup01)
+  steam_coldclient/               <- Steam ColdClient (Structure was created for Goldberg Steam emulator fork by Detanup01)
     adapter.json
     find_paths.ps1
     write_config.ps1
@@ -29,7 +29,7 @@ adapters/
     steamstub_x32.dll             <- Not part of the GitHub project, you provide this, search the forum
     steamstub_x64.dll             <- Not part of the GitHub project, you provide this, search the forum
     UserData_symbolic_link_for_D_tokens.ps1
-  uplay_r2/                       <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
+  uplay_r2/                       <- Uplay R2 (Structure was created for Goldberg R2 Ubisoft emulator version by demde)
     adapter.json
     find_paths.ps1
     write_config.ps1
@@ -40,7 +40,7 @@ adapters/
     make_shortcut.ps1
     GameSample.json
     GoldbergUplayR2-*/       <- you provide this asset pack (7 files, see below, search the forum)
-  uplay_r1/                  <- Uplay R1 (older Ubisoft emulator version), same structure as Uplay R2
+  uplay_r1/                  <- Uplay R1 (Structure was created for Goldberg R2 Ubisoft emulator version by demde, same structure as Uplay R2)
     ...same file list as uplay_r2, adapted for r1 naming...
     UplayR1-*/               <- you provide this asset pack (6 files, see below, search the forum)
 ```
