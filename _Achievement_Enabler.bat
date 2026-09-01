@@ -600,6 +600,7 @@ if defined AE_ASSETS_DIR if exist "%AE_ASSETS_DIR%" rmdir /S /Q "%AE_ASSETS_DIR%
 
 if exist "dummy_account.txt"                        del /Q "dummy_account.txt"
 if exist "dummy_account.txt.example"                del /Q "dummy_account.txt.example"
+if exist "LICENSE"                                  del /Q "LICENSE"
 if exist "README.md"                                del /Q "README.md"
 if exist "%AE_STATE_DIR%\ae_top_owners_update.log"  del /Q "%AE_STATE_DIR%\ae_top_owners_update.log"
 if exist "%AE_STATE_DIR%\ae_update_check.log"       del /Q "%AE_STATE_DIR%\ae_update_check.log"
