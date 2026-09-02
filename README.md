@@ -47,7 +47,7 @@ adapters/
 
 ## How it works
 
-`AchievementEnabler.bat` does everything that used to be duplicated between
+`_Achievement_Enabler V*.bat` does everything that used to be duplicated between
 the old scripts exactly once: downloads GBE Fork + GSE Tools, auto-detects
 which adapter applies, runs automatic crack-state pre-flight checks, finds/
 confirms the Steam AppID, fetches the SteamCMD manifest, parses launch args,
@@ -180,30 +180,4 @@ the adapter's own folder** (`adapters\<id>\<glob>`).
    marker files, add a check for it alongside the `uplay_r2`/`uplay_r1`
    blocks in the orchestrator's crack-state pre-flight step.
 
-Nothing else in `AchievementEnabler.bat` needs to change.
-
-## Known gaps / please verify before relying on this
-
-This was assembled and reorganized without a Windows machine to test on.
-Most of it has now been run end-to-end successfully against real games on
-both the Steam ColdClient and Uplay R2 branches, but keep watching console
-output on new games/setups, especially the `uplay_r1` branch and the
-`voices38` route, neither of which has had a confirmed real-world run yet.
-Remaining known gaps:
-
-- **`check_update.py`** checks GitHub releases at
-  `https://github.com/Roschach96/Achievement-Enabler` via the public REST
-  API (no browser/Playwright dependency anymore). It expects release tags
-  shaped like `V<n>` (matching the script's own `_V<n>` filename
-  versioning) — publish releases with that tag format for update
-  notifications to work.
-- The **top-owners background job** and the **update-check background job**
-  both race the rest of the script, exactly like the originals did; the
-  30-second wait before achievement generation is the only synchronization
-  point.
-- `dummy_account.txt` needs to exist next to `AchievementEnabler.bat` before
-  the first run — copy `dummy_account.txt.example` and fill it in.
-- Each adapter's required-asset-pack check (`write_config.ps1`) uses a
-  PowerShell `Where-Object | .Count` pattern that can misbehave if exactly
-  one file is missing, the same class of bug that was found and fixed in
-  `select_adapter.ps1`'s default-adapter check. Not yet audited/fixed here.
+Nothing else in `_Achievement_Enabler V*.bat` needs to change.
