@@ -27,7 +27,7 @@ adapters/
     make_shortcut.ps1
     GameSample.json
     steamstub_x32.dll             <- Not part of the GitHub project, check release notes.
-    steamstub_x64.dll             <- Not part of the GitHub project, you provide this, search the forum
+    steamstub_x64.dll             <- Not part of the GitHub project, check release notes.
     UserData_symbolic_link_for_D_tokens.ps1
   uplay_r2/                       <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
     adapter.json
