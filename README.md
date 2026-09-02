@@ -4,14 +4,10 @@ A merge of the old separate "Goldberg / ColdClient semi-auto setup" and
 "Uplay R2 semi-auto setup" batch toolkits into one project, built so
 other emulators can be added easily in the future.
 
-## Usage:
-Extract the files to the game's root folder (_Achievement_Enabler.bat should be visible) and run "_Achievement_Enabler.bat" and follow the steps.
-Adapters should be acquired before running the script.
-
 ## Layout
 
 ```
-_Achievement_Enabler.bat          <- the only script you run
+_Achievement_Enabler.bat          <- the only script you run (V* indicating the version)
 dummy_account.txt.example         <- rename it to dummy_account.txt and fill in your "throwaway account" details
 core/
   common/
@@ -20,9 +16,9 @@ core/
     shared_find_appid.ps1         <- Steam Store AppID lookup by folder name
     shared_parse_launch_args.ps1  <- Checks if the game needs any launch arguments to make achievemens work
     update_top_owners.py          <- Tries to create a list of profiles with newest games so achievement info can be collected
-    check_update.py               <- self-update notifier (see note below)
+    check_update.py               <- Checks GitHub page's releases for updates
 adapters/
-  steam_coldclient/               <- Steam ColdClient (Structure was created for Goldberg Steam emulator fork by Detanup01)
+  steam_coldclient/               <- Steam ColdClient (Goldberg Steam emulator fork by Detanup01)
     adapter.json
     find_paths.ps1
     write_config.ps1
@@ -33,7 +29,7 @@ adapters/
     steamstub_x32.dll             <- Not part of the GitHub project, you provide this, search the forum
     steamstub_x64.dll             <- Not part of the GitHub project, you provide this, search the forum
     UserData_symbolic_link_for_D_tokens.ps1
-  uplay_r2/                       <- Uplay R2 (Structure was created for Goldberg R2 Ubisoft emulator version by demde)
+  uplay_r2/                       <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
     adapter.json
     find_paths.ps1
     write_config.ps1
@@ -43,10 +39,10 @@ adapters/
     generate_achievement_percentages.ps1
     make_shortcut.ps1
     GameSample.json
-    GoldbergUplayR2-*/       <- you provide this asset pack (7 files, see below, search the forum)
-  uplay_r1/                  <- Uplay R1 (Structure was created for Goldberg R2 Ubisoft emulator version by demde, same structure as Uplay R2)
+    GoldbergUplayR2-*/            <- you provide this asset pack (7 files, see below)
+  uplay_r1/                       <- Uplay R1 (older Ubisoft emulator version), same structure as Uplay R2
     ...same file list as uplay_r2, adapted for r1 naming...
-    UplayR1-*/               <- you provide this asset pack (6 files, see below, search the forum)
+    UplayR1-*/                    <- you provide this asset pack (6 files, see below)
 ```
 
 ## How it works
@@ -185,3 +181,29 @@ the adapter's own folder** (`adapters\<id>\<glob>`).
    blocks in the orchestrator's crack-state pre-flight step.
 
 Nothing else in `AchievementEnabler.bat` needs to change.
+
+## Known gaps / please verify before relying on this
+
+This was assembled and reorganized without a Windows machine to test on.
+Most of it has now been run end-to-end successfully against real games on
+both the Steam ColdClient and Uplay R2 branches, but keep watching console
+output on new games/setups, especially the `uplay_r1` branch and the
+`voices38` route, neither of which has had a confirmed real-world run yet.
+Remaining known gaps:
+
+- **`check_update.py`** checks GitHub releases at
+  `https://github.com/Roschach96/Achievement-Enabler` via the public REST
+  API (no browser/Playwright dependency anymore). It expects release tags
+  shaped like `V<n>` (matching the script's own `_V<n>` filename
+  versioning) — publish releases with that tag format for update
+  notifications to work.
+- The **top-owners background job** and the **update-check background job**
+  both race the rest of the script, exactly like the originals did; the
+  30-second wait before achievement generation is the only synchronization
+  point.
+- `dummy_account.txt` needs to exist next to `AchievementEnabler.bat` before
+  the first run — copy `dummy_account.txt.example` and fill it in.
+- Each adapter's required-asset-pack check (`write_config.ps1`) uses a
+  PowerShell `Where-Object | .Count` pattern that can misbehave if exactly
+  one file is missing, the same class of bug that was found and fixed in
+  `select_adapter.ps1`'s default-adapter check. Not yet audited/fixed here.

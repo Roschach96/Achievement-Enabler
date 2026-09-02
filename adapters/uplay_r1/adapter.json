@@ -1,7 +1,7 @@
 {
   "id": "uplay_r1",
   "name": "Uplay R1 (Ubisoft Connect / upc_r1 loader)",
-  "priority": 10,
+  "priority": 25,
   "detect": {
     "loader_dll_names": ["upc_r1_loader.dll", "upc_r1_loader64.dll", "uplay_r1_loader.dll", "uplay_r1_loader64.dll"],
     "is_default": false
