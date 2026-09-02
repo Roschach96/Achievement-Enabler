@@ -26,7 +26,7 @@ adapters/
     generate_achievement_percentages.ps1
     make_shortcut.ps1
     GameSample.json
-    steamstub_x32.dll             <- Not part of the GitHub project, you provide this, search the forum
+    steamstub_x32.dll             <- Not part of the GitHub project, check release notes.
     steamstub_x64.dll             <- Not part of the GitHub project, you provide this, search the forum
     UserData_symbolic_link_for_D_tokens.ps1
   uplay_r2/                       <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
@@ -39,10 +39,10 @@ adapters/
     generate_achievement_percentages.ps1
     make_shortcut.ps1
     GameSample.json
-    GoldbergUplayR2-*/            <- you provide this asset pack (7 files, see below)
+    GoldbergUplayR2-*/            <- you provide this asset pack (7 files, check release notes.)
   uplay_r1/                       <- Uplay R1 (older Ubisoft emulator version), same structure as Uplay R2
     ...same file list as uplay_r2, adapted for r1 naming...
-    UplayR1-*/                    <- you provide this asset pack (6 files, see below)
+    UplayR1-*/                    <- you provide this asset pack (6 files, check release notes.)
 ```
 
 ## How it works
