@@ -7,7 +7,7 @@ other emulators can be added easily in the future.
 ## Layout
 
 ```
-_Achievement_Enabler.bat          <- the only script you run (V* indicating the version)
+_Achievement_Enabler V*.bat       <- the only script you run (V* indicating the version)
 dummy_account.txt.example         <- rename it to dummy_account.txt and fill in your "throwaway account" details
 core/
   common/
