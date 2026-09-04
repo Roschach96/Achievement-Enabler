@@ -7,7 +7,7 @@ other emulators can be added easily in the future.
 ## Layout
 
 ```
-_Achievement_Enabler V*.bat       <- the only script you run (V* indicating the version)
+_Achievement_Enabler.bat       <- the only script you run (V* indicating the version)
 dummy_account.txt.example         <- rename it to dummy_account.txt and fill in your "throwaway account" details
 core/
   common/
@@ -47,7 +47,7 @@ adapters/
 
 ## How it works
 
-`_Achievement_Enabler V*.bat` does everything that used to be duplicated between
+`_Achievement_Enabler.bat` does everything that used to be duplicated between
 the old scripts exactly once: downloads GBE Fork + GSE Tools, auto-detects
 which adapter applies, runs automatic crack-state pre-flight checks, finds/
 confirms the Steam AppID, fetches the SteamCMD manifest, parses launch args,
@@ -180,4 +180,4 @@ the adapter's own folder** (`adapters\<id>\<glob>`).
    marker files, add a check for it alongside the `uplay_r2`/`uplay_r1`
    blocks in the orchestrator's crack-state pre-flight step.
 
-Nothing else in `_Achievement_Enabler V*.bat` needs to change.
+Nothing else in `_Achievement_Enabler.bat` needs to change.

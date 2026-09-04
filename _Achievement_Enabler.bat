@@ -40,7 +40,7 @@ REM ============================================================================
 :main
 REM ============================================================================
 
-for /f "delims=" %%V in ('powershell -NoProfile -Command "$n='%~n0'; $ms=[regex]::Matches($n,'_V(\d+)'); if ($ms.Count -gt 0) { $ms[$ms.Count-1].Groups[1].Value } else { '0' }"') do set "SCRIPT_VER=%%V"
+for /f "delims=" %%T in ('powershell -NoProfile -Command "(Get-Item -LiteralPath '%~f0').LastWriteTimeUtc.ToString('o')"') do set "SCRIPT_MTIME=%%T"
 
 echo ========================================
 echo    Achievement Enabler
@@ -52,14 +52,16 @@ echo.
 
 REM ========================================
 REM Kick off the update check in the background - non-blocking.
+REM Compares this .bat file's own last-modified date against the publish
+REM date of every release at github.com/Roschach96/Achievement-Enabler.
 REM ========================================
 set "AE_STATE_DIR=%SystemDrive%\steamcmd\_GBE fork\AchievementEnabler"
 if not exist "%AE_STATE_DIR%" md "%AE_STATE_DIR%" >nul 2>&1
 set "UPDATE_RESULT_CMD=%AE_STATE_DIR%\ae_update_check_result.cmd"
 set "UPDATE_CHANGELOG_FILE=%AE_STATE_DIR%\ae_update_changelog.txt"
 set "UPDATE_LOG=%AE_STATE_DIR%\ae_update_check.log"
-set "UPDATE_SKIP_FILE=%AE_STATE_DIR%\Achievement Enabler skipped versions.txt"
 if exist "%UPDATE_RESULT_CMD%" del /Q "%UPDATE_RESULT_CMD%" >nul 2>&1
+set "UPDATE_SKIP_FILE=%AE_STATE_DIR%\Achievement Enabler skipped versions.txt"
 set "UC_PY="
 set "UC_PY_ARG="
 where py >nul 2>&1 && (set "UC_PY=py" & set "UC_PY_ARG=-3")
@@ -68,7 +70,7 @@ if not defined UC_PY (
 )
 set "UC_STARTED=0"
 if defined UC_PY (
-    start "" /B "%UC_PY%" %UC_PY_ARG% "%COMMON_DIR%\check_update.py" --current-version %SCRIPT_VER% --result-file "%UPDATE_RESULT_CMD%" --changelog-file "%UPDATE_CHANGELOG_FILE%" >"%UPDATE_LOG%" 2>&1
+    start "" /B "%UC_PY%" %UC_PY_ARG% "%COMMON_DIR%\check_update.py" --current-mtime "%SCRIPT_MTIME%" --result-file "%UPDATE_RESULT_CMD%" --changelog-file "%UPDATE_CHANGELOG_FILE%" --skip-file "%UPDATE_SKIP_FILE%" >"%UPDATE_LOG%" 2>&1
     set "UC_STARTED=1"
 )
 set "UC_PY="
@@ -168,6 +170,38 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
+
+REM ========================================
+REM One-time warning: GSE Tools 2026_02_16 ships a broken generate_emu_config.exe
+REM ========================================
+if "%GSE_TAG%"=="2026_02_16" (
+    if not exist "%SystemDrive%\steamcmd\GenerateEmuConfig_2026_02_16_Warning.txt" (
+        copy /b NUL "%SystemDrive%\steamcmd\GenerateEmuConfig_2026_02_16_Warning.txt" >nul
+        echo.
+        echo [WARNING] The cached GSE Tools version ^(2026_02_16^) ships a generate_emu_config.exe
+        echo [WARNING] that needs to be replaced before achievement data can be generated correctly.
+        echo [WARNING] Replace this file with a fixed version:
+        echo [WARNING]   %SystemDrive%\steamcmd\_GBE fork\gse_fork_tools\2026_02_16\generate_emu_config\generate_emu_config.exe
+        echo [WARNING] This warning will not be displayed again.
+        echo.
+        echo   1 - Roschach96's version
+        echo   2 - CHESIRE's version
+        echo   3 - Both
+        choice /C 123 /N /M "Which link do you want to open? (1-3): "
+        if errorlevel 3 (
+            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3539220#p3539220"
+            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3548848#p3548848"
+        ) else if errorlevel 2 (
+            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3548848#p3548848"
+        ) else (
+            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3539220#p3539220"
+        )
+        echo.
+        echo Please replace the file, then rerun this script.
+        pause
+        exit /b 1
+    )
+)
 
 REM ========================================
 REM STEP 3: Dummy Steam credentials for generate_emu_config
@@ -557,28 +591,21 @@ if "%UC_STARTED%"=="1" (
         del "%UPDATE_RESULT_CMD%" >nul 2>&1
     )
 )
-if defined REMOTE_VER (
-    if !REMOTE_VER! GTR !SCRIPT_VER! (
-        findstr /X /C:"!REMOTE_VER!" "!UPDATE_SKIP_FILE!" >nul 2>&1
-        if not errorlevel 1 (
-            echo [UPDATE] V!REMOTE_VER! was previously skipped.
-        ) else (
-            echo.
-            echo [UPDATE] A newer version is available: V!REMOTE_VER! ^(you have V!SCRIPT_VER!^)
-            if defined CHANGELOG_FILE if exist "!CHANGELOG_FILE!" (
-                echo.
-                echo -------- What's new --------
-                type "!CHANGELOG_FILE!"
-                echo -----------------------------
-            )
-            choice /C YNS /N /M "Open download page? (Y)es, (N)o, or (S)kip V!REMOTE_VER!"
-            if errorlevel 3 (
-                for %%D in ("!UPDATE_SKIP_FILE!") do if not exist "%%~dpD" md "%%~dpD" >nul 2>&1
-                >>"!UPDATE_SKIP_FILE!" echo !REMOTE_VER!
-            ) else if not errorlevel 2 (
-                start "" "!REMOTE_URL!"
-            )
-        )
+if defined UPDATE_AVAILABLE (
+    echo.
+    echo [UPDATE] !UPDATE_COUNT! release^(s^) newer than this script were found:
+    if defined CHANGELOG_FILE if exist "!CHANGELOG_FILE!" (
+        echo.
+        type "!CHANGELOG_FILE!"
+        echo -----------------------------
+    )
+    choice /C YNS /N /M "Open releases page? (Y)es, (N)o, or (S)kip these versions: "
+    if errorlevel 3 (
+        for %%D in ("!UPDATE_SKIP_FILE!") do if not exist "%%~dpD" md "%%~dpD" >nul 2>&1
+        for %%T in (!UPDATE_TAGS!) do >>"!UPDATE_SKIP_FILE!" echo %%T
+        echo [UPDATE] These versions will no longer be shown. Newer releases will still be checked.
+    ) else if not errorlevel 2 (
+        start "" "!REMOTE_URL!"
     )
 )
 
