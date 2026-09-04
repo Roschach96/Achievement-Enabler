@@ -4,10 +4,18 @@ A merge of the old separate "Goldberg / ColdClient semi-auto setup" and
 "Uplay R2 semi-auto setup" batch toolkits into one project, built so
 other emulators can be added easily in the future.
 
+## Usage
+
+1. Extract the zipped release to a folder
+2. Create dummy_account.txt and fill in your "throwaway account" details
+3. Keep a backup of these files somewhere because the script will delete all script related files from the game's folder after it finishes
+4. Copy all the script files to the game's folder
+5. Run _Achievement_Enabler.bat and follow the steps
+
 ## Layout
 
 ```
-_Achievement_Enabler.bat       <- the only script you run (V* indicating the version)
+_Achievement_Enabler.bat          <- the only script you run from the game's folder
 dummy_account.txt.example         <- rename it to dummy_account.txt and fill in your "throwaway account" details
 core/
   common/
