@@ -9,7 +9,7 @@ other emulators can be added easily in the future.
 1. Extract the zipped release to a folder
 2. Create dummy_account.txt and fill in your "throwaway account" details
 3. Keep a backup of these files somewhere because the script will delete all script related files from the game's folder after it finishes
-4. Copy all the script files to the game's folder
+4. Copy all the script files to the game's main folder
 5. Run _Achievement_Enabler.bat and follow the steps
 
 ## Layout
