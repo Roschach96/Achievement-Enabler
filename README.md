@@ -189,3 +189,11 @@ the adapter's own folder** (`adapters\<id>\<glob>`).
    blocks in the orchestrator's crack-state pre-flight step.
 
 Nothing else in `_Achievement_Enabler.bat` needs to change.
+
+## Special thanks
+
+Thank you Detanup01 for [gbe_fork](https://github.com/Detanup01/gbe_fork)
+Thank you alex47exe for [gse_fork_tools](https://github.com/alex47exe/gse_fork_tools)
+Thank you buzarini for the [base download and extract part of the script's download helper](https://cs.rin.ru/forum/viewtopic.php?p=3379912#p3379912)
+Thank you Valentine for [SteamStub patcher files](https://cs.rin.ru/forum/viewtopic.php?p=3193776#p3193776)
+Thank you D4rkz0mb1e, Kransekage, jacobneverstops, Emre_hitman47, Data_Dynamite4321, rektalbox, StevensND, suasif, dasafe, Fearless_Chang for your suggestions and feedbacks in the original projects before this project was merged from them.
