@@ -94,7 +94,7 @@ def main():
             published_dt = parse_iso8601(published_raw)
         except ValueError:
             continue
-        if published_dt <= current_dt:
+        if published_dt.date() <= current_dt.date():
             continue
         if tag in skip_set:
             continue
