@@ -2,6 +2,9 @@
 
 This script package aims to make games work with achievements for multiple platforms,
 
+## Compatible platforms
+Check the project's [adapters](https://github.com/Roschach96/Achievement-Enabler/tree/main/adapters)
+
 ## Usage
 
 1. Extract the zipped release to a folder
