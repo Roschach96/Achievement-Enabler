@@ -38,7 +38,17 @@ adapters/
     steamstub_x32.dll             <- Not part of the GitHub project, check release notes
     steamstub_x64.dll             <- Not part of the GitHub project, check release notes
     UserData_symbolic_link_for_D_tokens.ps1
-  gog_universelan                 <- Works without additional adapter files
+  gog_universelan/                <- GOG UniverseLAN (Galaxy SDK loader, by grasmanek94; no other adapter files needed)
+    adapter.json
+    find_paths.ps1
+    write_config.ps1
+    find_galaxy_dll.ps1
+    download_universelan.ps1
+    deploy_universelan.ps1
+    modify_joker_json.ps1
+    generate_achievement_percentages.ps1
+    make_shortcut.ps1
+    GameSample.json
   ubisoft_uplay_r2/               <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
     adapter.json
     find_paths.ps1
@@ -50,7 +60,7 @@ adapters/
     make_shortcut.ps1
     GameSample.json
     GoldbergUplayR2-*/            <- Not part of the GitHub project, check release notes.
-  ubisoft_uplay_r1/               <- Uplay R1 (older Ubisoft emulator version), same structure as Uplay R2
+  ubisoft_uplay_r1/               <- Uplay R1 (older Ubisoft emulator version by demde), same structure as Uplay R2
     ...same file list as ubisoft_uplay_r2, adapted for r1 naming...
     UplayR1-*/                    <- Not part of the GitHub project, check release notes.
 ```
