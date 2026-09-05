@@ -1,10 +1,16 @@
 # adapters\gog_universelan\make_shortcut.ps1
-# Creates a desktop shortcut pointing directly at the selected game exe.
-# Uses the native IShellLink COM interface via C# to fully support Unicode paths.
+# Creates a desktop shortcut that launches UniverseLANServer(64).exe and the
+# game together, with linked lifetimes: whichever of the two exits first,
+# the other is closed too. A plain .lnk can only point at one target, so
+# this generates a small launcher script (_ae_gog_launch.ps1) next to the
+# game exe and points the shortcut at that instead of the exe directly.
 #
 # Reads env vars set by AchievementEnabler.bat:
 #   AE_EXE_PATH    - full absolute path to the selected game executable
 #   AE_GAME_NAME   - folder name, used as the shortcut label
+#   AE_DESTINATION - folder containing Galaxy(64).dll and the matching
+#                    UniverseLANServer(64).exe (deploy_universelan.ps1
+#                    deletes whichever bitness doesn't match the game)
 
 Add-Type @"
 using System;
@@ -65,10 +71,11 @@ namespace AchievementEnablerGog {
     }
 
     public static class ShortcutHelper {
-        public static bool Create(string lnkPath, string target, string workDir,
+        public static bool Create(string lnkPath, string target, string args, string workDir,
                                   string iconPath, int iconIndex) {
             var link = (IShellLinkW) new ShellLink();
             link.SetPath(target);
+            link.SetArguments(args);
             link.SetWorkingDirectory(workDir);
             link.SetIconLocation(iconPath, iconIndex);
             var pf = (IPersistFile) link;
@@ -85,18 +92,71 @@ namespace AchievementEnablerGog {
 }
 "@
 
-$exePath = $env:AE_EXE_PATH
-$work    = Split-Path -Parent $exePath
-$desktop = [Environment]::GetFolderPath('Desktop')
+$exePath     = $env:AE_EXE_PATH
+$work        = Split-Path -Parent $exePath
+$desktop     = [Environment]::GetFolderPath('Desktop')
+$destination = $env:AE_DESTINATION
 
 $name = $env:AE_GAME_NAME
 if ([string]::IsNullOrWhiteSpace($name)) {
     $name = [System.IO.Path]::GetFileNameWithoutExtension($exePath)
 }
 
+# Find whichever UniverseLANServer(64).exe survived deploy_universelan.ps1's
+# bitness cleanup (it deletes the one that doesn't match the game's Galaxy
+# dll, so exactly one of these two should exist here).
+$serverExe = $null
+if ($destination -and (Test-Path -LiteralPath $destination)) {
+    foreach ($candidate in @('UniverseLANServer64.exe', 'UniverseLANServer.exe')) {
+        $p = Join-Path $destination $candidate
+        if (Test-Path -LiteralPath $p) {
+            $serverExe = $p
+            break
+        }
+    }
+}
+
+$launchTarget = $exePath
+$launchArgs   = ''
+
+if ($serverExe) {
+    # Generate a small launcher script that starts the server, then the
+    # game, and ties their lifetimes together: whichever process exits
+    # first, the other is closed too. The shortcut points at this launcher
+    # instead of the game exe directly, since a .lnk can only target one
+    # executable.
+    $launcherPath = Join-Path $work '_ae_gog_launch.ps1'
+    $launcherContent = @"
+`$ErrorActionPreference = 'SilentlyContinue'
+`$serverProc = Start-Process -FilePath '$serverExe' -WorkingDirectory '$destination' -PassThru
+Start-Sleep -Milliseconds 100
+`$gameProc = Start-Process -FilePath '$exePath' -WorkingDirectory '$work' -PassThru
+
+while ((-not `$serverProc.HasExited) -and (-not `$gameProc.HasExited)) {
+    Start-Sleep -Milliseconds 500
+}
+
+if (-not `$gameProc.HasExited) { Stop-Process -Id `$gameProc.Id -Force }
+if (-not `$serverProc.HasExited) { Stop-Process -Id `$serverProc.Id -Force }
+"@
+    try {
+        [System.IO.File]::WriteAllText($launcherPath, $launcherContent, [System.Text.UTF8Encoding]::new($false))
+        Write-Host "[INFO] Launcher script written: $launcherPath"
+        $launchTarget = (Get-Command 'powershell.exe').Source
+        $launchArgs   = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$launcherPath`""
+        Write-Host "[INFO] Shortcut will start $([System.IO.Path]::GetFileName($serverExe)) and the game together, with linked lifetimes."
+    } catch {
+        Write-Host "[WARN] Could not write launcher script ($_) - shortcut will point at the game exe directly."
+        $launchTarget = $exePath
+        $launchArgs   = ''
+    }
+} else {
+    Write-Host "[WARN] No UniverseLANServer(64).exe found in $destination - shortcut will point at the game exe directly."
+}
+
 function Try-Shortcut($lnkPath, $shortcutName) {
     try {
-        $ok = [AchievementEnablerGog.ShortcutHelper]::Create($lnkPath, $exePath, $work, $exePath, 0)
+        $ok = [AchievementEnablerGog.ShortcutHelper]::Create($lnkPath, $launchTarget, $launchArgs, $work, $exePath, 0)
         if ($ok) {
             Write-Host "Shortcut created: $shortcutName -> $(Split-Path -Leaf $exePath)"
             return $true

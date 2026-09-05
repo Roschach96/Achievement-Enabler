@@ -599,6 +599,7 @@ REM STEP 13: Desktop shortcut (adapter hook)
 REM ========================================
 echo Creating desktop shortcut...
 set "AE_EXE_PATH=%SELECTED_EXE%"
+set "AE_DESTINATION=%destination%"
 powershell -NoProfile -ExecutionPolicy Bypass -File "%AE_ADAPTER_DIR%\make_shortcut.ps1"
 echo.
 
