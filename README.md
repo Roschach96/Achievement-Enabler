@@ -35,7 +35,7 @@ adapters/
     steamstub_x32.dll             <- Not part of the GitHub project, check release notes.
     steamstub_x64.dll             <- Not part of the GitHub project, check release notes.
     UserData_symbolic_link_for_D_tokens.ps1
-  uplay_r2/                       <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
+  ubisoft_uplay_r2/                       <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
     adapter.json
     find_paths.ps1
     write_config.ps1
@@ -46,8 +46,8 @@ adapters/
     make_shortcut.ps1
     GameSample.json
     GoldbergUplayR2-*/            <- you provide this asset pack (7 files, check release notes.)
-  uplay_r1/                       <- Uplay R1 (older Ubisoft emulator version), same structure as Uplay R2
-    ...same file list as uplay_r2, adapted for r1 naming...
+  ubisoft_uplay_r1/                       <- Uplay R1 (older Ubisoft emulator version), same structure as Uplay R2
+    ...same file list as ubisoft_uplay_r2, adapted for r1 naming...
     UplayR1-*/                    <- you provide this asset pack (6 files, check release notes.)
 ```
 
