@@ -1,4 +1,4 @@
-# adapters\uplay_r2\make_shortcut.ps1
+# adapters\gog_universelan\make_shortcut.ps1
 # Creates a desktop shortcut pointing directly at the selected game exe.
 # Uses the native IShellLink COM interface via C# to fully support Unicode paths.
 #
@@ -12,7 +12,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 
-namespace AchievementEnablerUplay {
+namespace AchievementEnablerGog {
 
     [ComImport, Guid("00021401-0000-0000-C000-000000000046")]
     class ShellLink {}
@@ -96,7 +96,7 @@ if ([string]::IsNullOrWhiteSpace($name)) {
 
 function Try-Shortcut($lnkPath, $shortcutName) {
     try {
-        $ok = [AchievementEnablerUplay.ShortcutHelper]::Create($lnkPath, $exePath, $work, $exePath, 0)
+        $ok = [AchievementEnablerGog.ShortcutHelper]::Create($lnkPath, $exePath, $work, $exePath, 0)
         if ($ok) {
             Write-Host "Shortcut created: $shortcutName -> $(Split-Path -Leaf $exePath)"
             return $true

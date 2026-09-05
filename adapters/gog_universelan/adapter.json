@@ -1,0 +1,11 @@
+{
+  "id": "gog_universelan",
+  "name": "GOG UniverseLAN (Galaxy SDK loader)",
+  "priority": 30,
+  "detect": {
+    "loader_dll_names": ["Galaxy.dll", "Galaxy64.dll"],
+    "is_default": false
+  },
+  "assets_folder_glob": null,
+  "notes": "Auto-selected when Galaxy.dll or Galaxy64.dll is found anywhere in the game folder (REDGalaxy.dll/REDGalaxy64.dll are ignored and never touched). No bundled asset pack: write_config.ps1 downloads and caches UniverseLAN releases itself under %SystemDrive%\\steamcmd\\_GOG\\UniverseLAN on first run. The exe is resolved from a 'Launch *.lnk' shortcut in the game root, not from a SteamCMD manifest."
+}

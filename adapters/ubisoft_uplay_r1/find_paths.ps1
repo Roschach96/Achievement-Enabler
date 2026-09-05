@@ -1,5 +1,5 @@
-# adapters\uplay_r2\find_paths.ps1
-# Unicode-safe executable and loader-DLL finder for the Uplay R2 adapter.
+# adapters\ubisoft_uplay_r1\find_paths.ps1
+# Unicode-safe executable and loader-DLL finder for the Uplay R1 adapter.
 #
 # EXE SELECTION PRIORITY:
 #   1. *Shipping*.exe found -> auto-select (multiple -> pick among those)
@@ -12,7 +12,7 @@
 #         ExePathRelative
 
 $gameRoot       = (Get-Location).Path
-$excludePattern = 'release|generate_emu_config|parse_achievements_schema|parse_controller_vdf|GoldbergUplayR2'
+$excludePattern = 'release|generate_emu_config|parse_achievements_schema|parse_controller_vdf|UplayR1'
 $manifestFile   = $env:AE_MANIFEST_FILE
 
 function Get-RelPath($fullPath) {
@@ -190,14 +190,14 @@ if (-not $selectedExe) {
 }
 
 Write-Host ""
-Write-Host "Searching for Uplay R2 loader DLL files (excluding setup folders)..."
+Write-Host "Searching for Uplay R1 loader DLL files (excluding setup folders)..."
 Write-Host ""
 
 $loaderDllNames = @(
-    'upc_r2_loader.dll',
-    'upc_r2_loader64.dll',
-    'uplay_r2_loader.dll',
-    'uplay_r2_loader64.dll'
+    'upc_r1_loader.dll',
+    'upc_r1_loader64.dll',
+    'uplay_r1_loader.dll',
+    'uplay_r1_loader64.dll'
 )
 
 $allDlls = Get-ChildItem -Path $gameRoot -Recurse -ErrorAction SilentlyContinue |
@@ -209,20 +209,20 @@ $allDlls = Get-ChildItem -Path $gameRoot -Recurse -ErrorAction SilentlyContinue 
 $selectedDll = $null
 
 if ($allDlls.Count -eq 0) {
-    Write-Host "[!] Warning: No Uplay R2 loader DLLs found!"
+    Write-Host "[!] Warning: No Uplay R1 loader DLLs found!"
 } else {
     $binaryDll = $allDlls | Where-Object { $_.DirectoryName -match 'Binary|Binaries' } | Select-Object -First 1
 
     if ($binaryDll) {
-        Write-Host "Found $($allDlls.Count) Uplay R2 loader DLL file(s)."
+        Write-Host "Found $($allDlls.Count) Uplay R1 loader DLL file(s)."
         Write-Host "[+] Auto-selected (Binary folder detected): $(Get-RelPath $binaryDll.FullName)"
         $selectedDll = $binaryDll
     } elseif ($allDlls.Count -eq 1) {
-        Write-Host "Found 1 Uplay R2 loader DLL file(s)."
-        Write-Host "[+] Found only one Uplay R2 loader DLL: $(Get-RelPath $allDlls[0].FullName)"
+        Write-Host "Found 1 Uplay R1 loader DLL file(s)."
+        Write-Host "[+] Found only one Uplay R1 loader DLL: $(Get-RelPath $allDlls[0].FullName)"
         $selectedDll = $allDlls[0]
     } else {
-        Write-Host "Found $($allDlls.Count) Uplay R2 loader DLL files. No Binary folder prioritized. Please select manually:"
+        Write-Host "Found $($allDlls.Count) Uplay R1 loader DLL files. No Binary folder prioritized. Please select manually:"
         Write-Host ""
         for ($i = 0; $i -lt $allDlls.Count; $i++) {
             Write-Host "  $($i+1)) $(Get-RelPath $allDlls[$i].FullName)"

@@ -17,6 +17,13 @@ REM   modify_joker_json.ps1             - fill in the Jokerverse Achievements JS
 REM   generate_achievement_percentages.ps1 - global unlock % (shared call signature)
 REM   make_shortcut.ps1                 - create the desktop shortcut
 REM
+REM The Steam-schema chain (dummy credentials, steam_appid.txt/Steam Store
+REM AppID lookup, SteamCMD manifest fetch, generate_emu_config achievement
+REM data) is Steam-only and is skipped entirely when AE_ADAPTER_ID is
+REM gog_universelan - that adapter looks up its own GOG App ID from
+REM goggame-*.info inside modify_joker_json.ps1 and handles achievements
+REM separately.
+REM
 REM To support a new emulator later: add adapters\<new_id>\ with those five
 REM scripts, an adapter.json (id/name/priority/detect.asset_folder_glob), and
 REM a GameSample.json. Nothing in this file needs to change.
@@ -107,11 +114,11 @@ echo.
 
 REM ========================================
 REM STEP 1b: Automatic crack-state pre-flight checks (no user prompt)
-REM Search excludes core\ and adapters\ - our own shipped uplay_r2 asset
-REM pack contains template copies of uplay_r2.ini/upc_r2.ini, which would
-REM otherwise always false-positive this check.
+REM Search excludes core\ and adapters\ - our own shipped ubisoft_uplay_r2
+REM asset pack contains template copies of uplay_r2.ini/upc_r2.ini, which
+REM would otherwise always false-positive this check.
 REM ========================================
-if "%AE_ADAPTER_ID%"=="uplay_r2" (
+if "%AE_ADAPTER_ID%"=="ubisoft_uplay_r2" (
     set "AE_CRACK_FOUND="
     for /f "delims=" %%F in ('dir /s /b uplay_r2.ini upc_r2.ini 2^>nul ^| findstr /I /V /C:"\adapters\" /C:"\core\"') do set "AE_CRACK_FOUND=1"
     if not defined AE_CRACK_FOUND (
@@ -124,7 +131,7 @@ if "%AE_ADAPTER_ID%"=="uplay_r2" (
     echo [INFO] Crack files detected ^(uplay_r2.ini / upc_r2.ini^) - proceeding.
     echo.
 )
-if "%AE_ADAPTER_ID%"=="uplay_r1" (
+if "%AE_ADAPTER_ID%"=="ubisoft_uplay_r1" (
     set "AE_CRACK_FOUND="
     for /f "delims=" %%F in ('dir /s /b uplay_r1.ini upc_r1.ini 2^>nul ^| findstr /I /V /C:"\adapters\" /C:"\core\"') do set "AE_CRACK_FOUND=1"
     if not defined AE_CRACK_FOUND (
@@ -159,9 +166,12 @@ if "%AE_ADAPTER_ID%"=="steam_coldclient" (
 
 REM ========================================
 REM STEP 2: Download/extract shared tooling (GBE Fork release + GSE Tools)
-REM Both adapters consume these two folders regardless of which is selected.
+REM Steam-only (Goldberg loader/generate_interfaces + generate_emu_config) -
+REM skipped entirely for gog_universelan, which uses none of it.
 REM ========================================
 set "GBE_CACHE_DIR=%SystemDrive%\steamcmd\_GBE fork"
+if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_core_tools
+
 echo Fetching shared emulator tooling (GBE Fork + GSE Tools)...
 call "%COMMON_DIR%\download_helpers.bat" FetchCoreTools "%gameFolder%" "%GBE_CACHE_DIR%"
 if errorlevel 1 (
@@ -202,12 +212,17 @@ if "%GSE_TAG%"=="2026_02_16" (
         exit /b 1
     )
 )
+:skip_core_tools
 
 REM ========================================
 REM STEP 3: Dummy Steam credentials for generate_emu_config
+REM (Steam-schema only - GOG has no Steam achievement schema to fetch, so
+REM gog_universelan skips this entirely and needs no dummy_account.txt.)
 REM ========================================
 set "GSE_CFG_USERNAME="
 set "GSE_CFG_PASSWORD="
+if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_dummy_creds
+
 set "dummyCredsFile=%TOOLS_DIR%dummy_account.txt"
 if not exist "%dummyCredsFile%" (
     echo.
@@ -237,15 +252,22 @@ if not defined GSE_CFG_PASSWORD (
 )
 echo Dummy account environment variables are ready.
 echo.
+:skip_dummy_creds
 
 REM ========================================
 REM STEP 4: Detect game name + Steam AppID
+REM (Steam-only - gog_universelan gets its GOG App ID independently, inside
+REM modify_joker_json.ps1, from the game's own goggame-*.info file.)
 REM ========================================
 for %%I in ("%gameFolder%") do set "gameName=%%~nxI"
 echo [INFO] Game name set to folder name: %gameName%
 echo.
 
 set "gameAppID="
+set "LAUNCH_ARGS="
+
+if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_steam_appid
+
 set "foundAppIDFile="
 if exist "%gameFolder%\steam_appid.txt" (
     set "foundAppIDFile=%gameFolder%\steam_appid.txt"
@@ -292,7 +314,6 @@ if defined foundAppIDFile (
 REM ========================================
 REM STEP 5: Fetch the Steam manifest, parse launch args
 REM ========================================
-set "LAUNCH_ARGS="
 set "manifestFile=%gameFolder%\%gameAppID%_manifest.txt"
 set "steamcmdDir=%SystemDrive%\steamcmd"
 set "steamcmdExe=%steamcmdDir%\steamcmd.exe"
@@ -325,6 +346,7 @@ if exist "%gameFolder%\_ae_launch_args.cmd" (
 echo.
 echo Steam AppID: %gameAppID%
 echo.
+:skip_steam_appid
 
 REM ========================================
 REM STEP 6: Adapter hook - find_paths.ps1
@@ -385,16 +407,20 @@ echo.
 
 REM ========================================
 REM STEP 8: Update the SteamLadder top-owners cache in the background
-REM (fallback achievement-percentage source when a game has no regular data)
+REM (fallback achievement-percentage source when a game has no regular data -
+REM Steam-only, skipped for gog_universelan, which never runs
+REM generate_emu_config and has no use for this cache.)
 REM ========================================
+set "TOP_OWNERS_STARTED=0"
+set "TOP_OWNERS_UPDATED="
+if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_top_owners
+
 set "TOP_OWNERS_RESULT_CMD=%AE_STATE_DIR%\ae_top_owners_result.cmd"
 set "TOP_OWNERS_CACHE_FILE=%AE_STATE_DIR%\top_owners_ids.txt"
 set "TOP_OWNERS_TEMP_FILE=%AE_STATE_DIR%\top_owners_ids.new.txt"
 set "TOP_OWNERS_LOG=%AE_STATE_DIR%\ae_top_owners_update.log"
 if exist "%TOP_OWNERS_RESULT_CMD%" del /Q "%TOP_OWNERS_RESULT_CMD%" >nul 2>&1
 if exist "%TOP_OWNERS_TEMP_FILE%" del /Q "%TOP_OWNERS_TEMP_FILE%" >nul 2>&1
-set "TOP_OWNERS_STARTED=0"
-set "TOP_OWNERS_UPDATED="
 set "COMMON_SCRIPT=%COMMON_DIR%\update_top_owners.py"
 echo [INFO] Refreshing the SteamLadder top-owners cache in the background...
 set "PY_EXE="
@@ -421,10 +447,15 @@ if exist "%TOP_OWNERS_CACHE_FILE%" (
     echo [INFO] No cached SteamLadder top-owners list is available yet.
 )
 echo.
+:skip_top_owners
 
 REM ========================================
-REM STEP 9: Generate achievement data (shared - both adapters read this)
+REM STEP 9: Generate achievement data (Steam-schema only - skipped for
+REM gog_universelan, which has no Steam achievement schema to fetch and
+REM handles achievements separately.)
 REM ========================================
+if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_gen_emu_config
+
 call generate_emu_config\generate_emu_config -acw %gameAppID%
 
 if not exist "generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\achievements.json" (
@@ -451,6 +482,7 @@ if exist "%zipFile%" (
     echo Extracting extra_acw.zip...
     powershell -Command "Expand-Archive -LiteralPath '%zipFile%' -DestinationPath '%acwExtractDir%' -Force"
 )
+:skip_gen_emu_config
 echo.
 
 REM ========================================
@@ -487,8 +519,10 @@ if not defined AE_FINAL_EXECUTABLE set "AE_FINAL_EXECUTABLE=%SELECTED_EXE%"
 echo.
 
 REM ========================================
-REM STEP 11: Achievement Watcher export (shared, if the folder exists locally)
+REM STEP 11: Achievement Watcher export (Steam-only - Achievement Watcher
+REM tracks Steam achievement caches, so this is skipped for gog_universelan)
 REM ========================================
+if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_acw
 if not exist "%AppData%\Achievement Watcher\steam_cache\schema" (
     echo Achievement Watcher schema folder not found, skipping.
     goto :skip_acw
@@ -525,7 +559,11 @@ if not exist "%AppData%\Achievements\" (
 )
 
 set "targetDir=%AppData%\Achievements\configs"
+if "%AE_ADAPTER_ID%"=="gog_universelan" (
+    set "targetJsonPath=%targetDir%\%gameName% (GOG).json"
+) else (
 set "targetJsonPath=%targetDir%\%gameName%.json"
+)
 if exist "%targetJsonPath%" del /Q "%targetJsonPath%"
 
 set "AE_SOURCE_JSON=%AE_ADAPTER_DIR%\GameSample.json"
@@ -539,8 +577,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%AE_ADAPTER_DIR%\modify_jok
 if errorlevel 1 (
     echo [WARN] !AE_ADAPTER_NAME! modify_joker_json.ps1 reported an error - check output above.
 )
-echo [INFO] %gameName%.json written to: %targetDir%
+echo [INFO] Config written to: %targetJsonPath%
 echo.
+
+if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_steam_joker
 
 set "gseTarget=%AppData%\Achievements\configs\schema\steam\%gameAppID%"
 if exist "generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\" (
@@ -551,7 +591,7 @@ if exist "generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\" (
     set "achievementsJsonPath=%gameFolder%\generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\achievements.json"
     powershell -NoProfile -ExecutionPolicy Bypass -File "%AE_ADAPTER_DIR%\generate_achievement_percentages.ps1" -AppId "%gameAppID%" -AchievementsJsonPath "!achievementsJsonPath!" -OutputRoot "%AppData%\Achievements\configs\schema\steam"
 )
-:skip_joker
+:skip_steam_joker
 echo.
 
 REM ========================================

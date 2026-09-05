@@ -1,0 +1,10 @@
+{
+  "name": "GameSample (GOG)",
+  "appid": "0000000",
+  "platform": "gog",
+  "config_path": "AppData\\Achievements\\configs\\schema\\gog\\0000000",
+  "save_path": "AppData\\Local\\UniverseLAN\\0000000",
+  "executable": "",
+  "arguments": "",
+  "process_name": ""
+}

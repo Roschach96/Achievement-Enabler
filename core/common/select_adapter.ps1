@@ -18,7 +18,7 @@
 #                                                          game folder
 #
 # The DLL search always excludes the script's own folders (core\, adapters\) -
-# adapter template assets (e.g. adapters\uplay_r2\GoldbergUplayR2-*) live
+# adapter template assets (e.g. adapters\ubisoft_uplay_r2\GoldbergUplayR2-*) live
 # inside adapters\, so excluding that root wholesale also keeps the template
 # DLLs from causing a false-positive match on their own account.
 #

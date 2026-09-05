@@ -1,4 +1,4 @@
-# adapters\uplay_r1\modify_joker_json.ps1
+# adapters\ubisoft_uplay_r1\modify_joker_json.ps1
 # Reads GameSample.json (Uplay variant - executable field points straight at
 # the game exe rather than a loader), fills in all real values, writes the
 # final per-game config to the Jokerverse Achievements folder.
@@ -33,7 +33,7 @@ if (-not $executable)  { $missing += "AE_EXECUTABLE" }
 if (-not $processName) { $missing += "AE_PROCESS_NAME" }
 
 if ($missing.Count -gt 0) {
-    Write-Host "[ERROR] uplay_r1\modify_joker_json.ps1: missing env var(s): $($missing -join ', ')"
+    Write-Host "[ERROR] ubisoft_uplay_r1\modify_joker_json.ps1: missing env var(s): $($missing -join ', ')"
     exit 1
 }
 

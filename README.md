@@ -38,7 +38,7 @@ adapters/
     steamstub_x32.dll             <- Not part of the GitHub project, check release notes.
     steamstub_x64.dll             <- Not part of the GitHub project, check release notes.
     UserData_symbolic_link_for_D_tokens.ps1
-  ubisoft_uplay_r2/                       <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
+  ubisoft_uplay_r2/               <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
     adapter.json
     find_paths.ps1
     write_config.ps1
@@ -49,7 +49,7 @@ adapters/
     make_shortcut.ps1
     GameSample.json
     GoldbergUplayR2-*/            <- you provide this asset pack (7 files, check release notes.)
-  ubisoft_uplay_r1/                       <- Uplay R1 (older Ubisoft emulator version), same structure as Uplay R2
+  ubisoft_uplay_r1/               <- Uplay R1 (older Ubisoft emulator version), same structure as Uplay R2
     ...same file list as ubisoft_uplay_r2, adapted for r1 naming...
     UplayR1-*/                    <- you provide this asset pack (6 files, check release notes.)
 ```
@@ -117,7 +117,7 @@ adapter is selected, the orchestrator runs automatic checks (search excludes
 `core\` and `adapters\`, so the project's own shipped template files never
 cause a false positive):
 
-- **`uplay_r2` / `uplay_r1` selected** — searches the game folder for
+- **`ubisoft_uplay_r2` / `ubisoft_uplay_r1` selected** — searches the game folder for
   `uplay_r*.ini` or `upc_r*.ini`. Found → assumed already cracked, proceeds
   silently, no prompt. Not found → stops and tells the user to apply the
   crack files first, then rerun.
@@ -152,7 +152,7 @@ Each `adapter.json` has a `detect` block:
 for any file named in `loader_dll_names`, and auto-selects the adapter that
 matches. The search excludes the script's own `core\` and `adapters\`
 folders wholesale — which also covers each adapter's own asset pack (e.g.
-`adapters\uplay_r2\GoldbergUplayR2-*\`), since that lives *inside*
+`adapters\ubisoft_uplay_r2\GoldbergUplayR2-*\`), since that lives *inside*
 `adapters\`, not next to the script or in the game folder.
 
 Exactly one adapter should have `"is_default": true` with an empty
@@ -177,16 +177,16 @@ the adapter's own folder** (`adapters\<id>\<glob>`).
    }
    ```
 3. Implement the five hook scripts using the `AE_*` contract documented
-   above (copy `uplay_r2` or `uplay_r1` as a starting point if the new
+   above (copy `ubisoft_uplay_r2` or `ubisoft_uplay_r1` as a starting point if the new
    emulator is ini/DLL-based like those two — it's the more reusable
    pattern; `steam_coldclient` has more one-off logic).
 4. Add a `GameSample.json` template with whatever `executable` value makes
    sense for that emulator.
 5. If it needs its own asset pack (ini/DLL templates), ship it inside
    `adapters/<new_id>/` and give `write_config.ps1` a failsafe check for the
-   required files, matching the `uplay_r2`/`uplay_r1` pattern.
+   required files, matching the `ubisoft_uplay_r2`/`ubisoft_uplay_r1` pattern.
 6. If the new emulator is ini/DLL-based and has its own "already cracked"
-   marker files, add a check for it alongside the `uplay_r2`/`uplay_r1`
+   marker files, add a check for it alongside the `ubisoft_uplay_r2`/`ubisoft_uplay_r1`
    blocks in the orchestrator's crack-state pre-flight step.
 
 Nothing else in `_Achievement_Enabler.bat` needs to change.
@@ -201,6 +201,8 @@ Thank you buzarini for the [base download and extract part of the script's downl
 
 Thank you Valentine for [SteamStub patcher files](https://cs.rin.ru/forum/viewtopic.php?p=3193776#p3193776)
 
-Thank you demde for UplayR1 and UplayR2
+Thank you demde for [UplayR1](https://cs.rin.ru/forum/viewtopic.php?p=3572254#p3572254) and [UplayR2](https://cs.rin.ru/forum/viewtopic.php?p=3526038#p3526038)
+
+Thank you grasmanek94 for [UniverseLAN](https://github.com/grasmanek94/UniverseLAN)
 
 Thank you D4rkz0mb1e, Kransekage, jacobneverstops, Emre_hitman47, Data_Dynamite4321, rektalbox, StevensND, suasif, dasafe, Fearless_Chang for your suggestions and feedbacks in the original projects before this project was merged from them
