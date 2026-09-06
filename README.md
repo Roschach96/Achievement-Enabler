@@ -43,7 +43,7 @@ adapters/
     steamstub_x32.dll             <- Not part of the GitHub project, check release notes
     steamstub_x64.dll             <- Not part of the GitHub project, check release notes
     UserData_symbolic_link_for_D_tokens.ps1
-  gog_universelan/                <- GOG UniverseLAN (Galaxy SDK loader, by grasmanek94; no other adapter files needed)
+  gog_universelan/                <- GOG UniverseLAN (GOG Galaxy wrapper by grasmanek94)
     adapter.json
     find_paths.ps1
     write_config.ps1
