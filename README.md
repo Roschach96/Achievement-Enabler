@@ -55,6 +55,7 @@ adapters/
     make_shortcut.ps1
     GameSample.json
   ubisoft_uplay_r2/               <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
+    GoldbergUplayR2-*/            <- Not part of the GitHub project, check release notes.
     adapter.json
     find_paths.ps1
     write_config.ps1
@@ -64,10 +65,9 @@ adapters/
     generate_achievement_percentages.ps1
     make_shortcut.ps1
     GameSample.json
-    GoldbergUplayR2-*/            <- Not part of the GitHub project, check release notes.
   ubisoft_uplay_r1/               <- Uplay R1 (older Ubisoft emulator version by demde), same structure as Uplay R2
-    ...same file list as ubisoft_uplay_r2, adapted for r1 naming...
     UplayR1-*/                    <- Not part of the GitHub project, check release notes.
+    ...same file list as ubisoft_uplay_r2, adapted for r1 naming...
 ```
 
 ## How it works
