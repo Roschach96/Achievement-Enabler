@@ -442,6 +442,12 @@ echo.
 if exist "%TOP_OWNERS_CACHE_FILE%" (
     if not exist "generate_emu_config" mkdir "generate_emu_config"
     copy /Y "%TOP_OWNERS_CACHE_FILE%" "generate_emu_config\top_owners_ids.txt" >nul
+    set "GSE_FORK_TOOLS_DIR=%SystemDrive%\steamcmd\_GBE fork\gse_fork_tools"
+    if exist "%GSE_FORK_TOOLS_DIR%" (
+        for /d %%D in ("%GSE_FORK_TOOLS_DIR%\*") do (
+            if exist "%%D\generate_emu_config" copy /Y "%TOP_OWNERS_CACHE_FILE%" "%%D\generate_emu_config\top_owners_ids.txt" >nul 2>&1
+        )
+    )
     echo [INFO] Using cached SteamLadder top-owners list.
 ) else (
     echo [INFO] No cached SteamLadder top-owners list is available yet.
@@ -466,6 +472,12 @@ if not exist "generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\achievement
     )
     if defined TOP_OWNERS_UPDATED if exist "%TOP_OWNERS_CACHE_FILE%" (
         copy /Y "%TOP_OWNERS_CACHE_FILE%" "generate_emu_config\top_owners_ids.txt" >nul
+        set "GSE_FORK_TOOLS_DIR=%SystemDrive%\steamcmd\_GBE fork\gse_fork_tools"
+        if exist "%GSE_FORK_TOOLS_DIR%" (
+            for /d %%D in ("%GSE_FORK_TOOLS_DIR%\*") do (
+                if exist "%%D\generate_emu_config" copy /Y "%TOP_OWNERS_CACHE_FILE%" "%%D\generate_emu_config\top_owners_ids.txt" >nul 2>&1
+            )
+        )
         echo [INFO] SteamLadder list is ready; retrying achievement generation with the fallback list.
         call generate_emu_config\generate_emu_config -acw %gameAppID%
     ) else (
