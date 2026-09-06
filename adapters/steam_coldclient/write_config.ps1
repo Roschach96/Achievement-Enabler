@@ -72,6 +72,7 @@ $extraDlls = Join-Path $coldClientPath "extra_dlls"
 if (-not (Test-Path -LiteralPath $extraDlls)) {
     New-Item -ItemType Directory -Path $extraDlls -Force | Out-Null
 }
+$missingStubs = @()
 foreach ($stub in @('steamstub_x32.dll', 'steamstub_x64.dll')) {
     $src = Join-Path $adapterDir $stub
     if (Test-Path -LiteralPath $src) {
@@ -79,6 +80,7 @@ foreach ($stub in @('steamstub_x32.dll', 'steamstub_x64.dll')) {
         Write-Host "[INFO] Copied $stub into: $extraDlls"
     } else {
         Write-Host "[WARN] $stub not found at: $src (expected inside adapters\steam_coldclient\)"
+        $missingStubs += $stub
     }
 }
 
@@ -289,5 +291,13 @@ $finalExe = Join-Path $coldClientPath $loaderExe
     @("set `"AE_FINAL_EXECUTABLE=$finalExe`""),
     [System.Text.Encoding]::ASCII
 )
+
+if ($missingStubs.Count -gt 0) {
+    [System.IO.File]::WriteAllLines(
+        (Join-Path $gameFolder "_ae_missing_stubs.cmd"),
+        @("set `"AE_MISSING_STUBS=$($missingStubs -join ' ')`""),
+        [System.Text.Encoding]::ASCII
+    )
+}
 
 exit 0

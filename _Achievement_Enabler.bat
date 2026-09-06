@@ -429,12 +429,7 @@ where py >nul 2>&1 && set "PY_EXE=py" && set "PY_VER_ARG=-3"
 if not defined PY_EXE (
     where python >nul 2>&1 && set "PY_EXE=python"
 )
-if defined PY_EXE (
-    set "TOP_OWNERS_PY=%PY_EXE%"
-    set "TOP_OWNERS_PY_ARG=%PY_VER_ARG%"
-    start "" /B powershell -NoProfile -ExecutionPolicy Bypass -Command "$a = @(); if ($env:TOP_OWNERS_PY_ARG) { $a += $env:TOP_OWNERS_PY_ARG }; $a += @($env:COMMON_SCRIPT, '--txt-output', $env:TOP_OWNERS_TEMP_FILE); & $env:TOP_OWNERS_PY @a; $exitCode = $LASTEXITCODE; if ($exitCode -eq 0 -and (Test-Path -LiteralPath $env:TOP_OWNERS_TEMP_FILE)) { Move-Item -LiteralPath $env:TOP_OWNERS_TEMP_FILE -Destination $env:TOP_OWNERS_CACHE_FILE -Force; [IO.File]::WriteAllText($env:TOP_OWNERS_RESULT_CMD, 'set TOP_OWNERS_UPDATED=1', [Text.Encoding]::ASCII) } else { [IO.File]::WriteAllText($env:TOP_OWNERS_RESULT_CMD, 'set TOP_OWNERS_UPDATE_FAILED=1', [Text.Encoding]::ASCII) }" >"%TOP_OWNERS_LOG%" 2>&1
-    set "TOP_OWNERS_STARTED=1"
-) else (
+if not defined PY_EXE (
     set "GSE_BASE_LIST_TAG="
     set "GSE_FORK_TOOLS_DIR_CHECK=%SystemDrive%\steamcmd\_GBE fork\gse_fork_tools"
     if exist "%GSE_FORK_TOOLS_DIR_CHECK%" (
@@ -460,9 +455,12 @@ if defined PY_EXE (
     echo [WARN] https://cs.rin.ru/forum/viewtopic.php?p=3491938#p3491938
     echo [WARN] Press Y to open that guide in your browser, or N to continue without it.
     choice /C YN /N >nul
-    if errorlevel 2 goto :skip_guide_link
-    start "" "https://cs.rin.ru/forum/viewtopic.php?p=3491938#p3491938"
-    :skip_guide_link
+    if not errorlevel 2 start "" "https://cs.rin.ru/forum/viewtopic.php?p=3491938#p3491938"
+) else (
+    set "TOP_OWNERS_PY=%PY_EXE%"
+    set "TOP_OWNERS_PY_ARG=%PY_VER_ARG%"
+    start "" /B powershell -NoProfile -ExecutionPolicy Bypass -Command "$a = @^(^); if ^($env:TOP_OWNERS_PY_ARG^) { $a += $env:TOP_OWNERS_PY_ARG }; $a += @^($env:COMMON_SCRIPT, '--txt-output', $env:TOP_OWNERS_TEMP_FILE^); & $env:TOP_OWNERS_PY @a; $exitCode = $LASTEXITCODE; if ^($exitCode -eq 0 -and ^(Test-Path -LiteralPath $env:TOP_OWNERS_TEMP_FILE^)^) { Move-Item -LiteralPath $env:TOP_OWNERS_TEMP_FILE -Destination $env:TOP_OWNERS_CACHE_FILE -Force; [IO.File]::WriteAllText^($env:TOP_OWNERS_RESULT_CMD, 'set TOP_OWNERS_UPDATED=1', [Text.Encoding]::ASCII^) } else { [IO.File]::WriteAllText^($env:TOP_OWNERS_RESULT_CMD, 'set TOP_OWNERS_UPDATE_FAILED=1', [Text.Encoding]::ASCII^) }" >"%TOP_OWNERS_LOG%" 2>&1
+    set "TOP_OWNERS_STARTED=1"
 )
 echo.
 :skip_top_owners
@@ -530,6 +528,7 @@ set "AE_DESTINATION=%destination%"
 set "AE_EXE_PATH=%SELECTED_EXE%"
 
 if exist "%gameFolder%\_ae_final_exe.cmd" del /Q "%gameFolder%\_ae_final_exe.cmd"
+if exist "%gameFolder%\_ae_missing_stubs.cmd" del /Q "%gameFolder%\_ae_missing_stubs.cmd"
 powershell -NoProfile -ExecutionPolicy Bypass -File "%AE_ADAPTER_DIR%\write_config.ps1"
 if errorlevel 1 (
     echo [WARN] !AE_ADAPTER_NAME! write_config.ps1 reported an error - check output above.
@@ -540,6 +539,24 @@ if exist "%gameFolder%\_ae_final_exe.cmd" (
     del /Q "%gameFolder%\_ae_final_exe.cmd"
 )
 if not defined AE_FINAL_EXECUTABLE set "AE_FINAL_EXECUTABLE=%SELECTED_EXE%"
+
+set "AE_MISSING_STUBS="
+if exist "%gameFolder%\_ae_missing_stubs.cmd" (
+    call "%gameFolder%\_ae_missing_stubs.cmd"
+    del /Q "%gameFolder%\_ae_missing_stubs.cmd"
+)
+if defined AE_MISSING_STUBS (
+    echo.
+    echo [WARNING] The following SteamStub-avoider DLL^(s^) are missing from:
+    echo [WARNING]   .\adapters\steam_coldclient\
+    echo [WARNING]   %AE_MISSING_STUBS%
+    echo [WARNING] Without them, some games protected by SteamStub
+    echo [WARNING] may fail to launch correctly.
+    echo [WARNING] Please add the missing file^(s^) to that folder, then rerun
+    echo [WARNING] this script so they get copied into _ColdClient\extra_dlls.
+    echo.
+    pause
+)
 echo.
 
 REM ========================================
@@ -692,7 +709,6 @@ if defined AE_ASSETS_DIR if exist "%AE_ASSETS_DIR%" rmdir /S /Q "%AE_ASSETS_DIR%
 
 if exist "dummy_account.txt"                        del /Q "dummy_account.txt"
 if exist "dummy_account.txt.example"                del /Q "dummy_account.txt.example"
-if exist "LICENSE"                                  del /Q "LICENSE"
 if exist "README.md"                                del /Q "README.md"
 if exist "%AE_STATE_DIR%\ae_top_owners_update.log"  del /Q "%AE_STATE_DIR%\ae_top_owners_update.log"
 if exist "%AE_STATE_DIR%\ae_update_check.log"       del /Q "%AE_STATE_DIR%\ae_update_check.log"

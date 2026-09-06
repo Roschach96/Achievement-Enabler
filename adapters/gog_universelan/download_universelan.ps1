@@ -111,6 +111,7 @@ function Invoke-DownloadUniverseLan {
     Write-Host "Checking latest UniverseLAN release..."
 
     $headers = @{ 'User-Agent' = 'AchievementEnablerSetup' }
+
     try {
         $release = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$repoOwner/$repoName/releases/latest"
     } catch {
@@ -122,14 +123,20 @@ function Invoke-DownloadUniverseLan {
     $safeTag = ($tag.Split([IO.Path]::GetInvalidFileNameChars()) -join '_')
     $tagDir  = Join-Path $CacheRoot $safeTag
 
-    $cached = Get-ChildItem -LiteralPath $CacheRoot -Directory -ErrorAction SilentlyContinue |
-        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    $expectedFiles = @('Galaxy.dll', 'Galaxy64.dll', 'UniverseLANServer.exe', 'UniverseLANServer64.exe')
+    $hasExpectedFile = $false
+    if (Test-Path -LiteralPath $tagDir) {
+        $hasExpectedFile = [bool](Get-ChildItem -LiteralPath $tagDir -Recurse -File -ErrorAction SilentlyContinue |
+            Where-Object { $expectedFiles -contains $_.Name } | Select-Object -First 1)
+    }
 
-    if ($cached -and $cached.Name -eq $safeTag -and
-        (Get-ChildItem -LiteralPath $cached.FullName -Directory -ErrorAction SilentlyContinue).Count -gt 0) {
-        Write-Host "[INFO] UniverseLAN $safeTag is already cached and extracted - skipping."
+    if ($hasExpectedFile) {
+        Write-Host "[INFO] UniverseLAN $safeTag is up to date and already cached - skipping."
         Write-Host "[INFO] UniverseLAN files kept at: $tagDir"
         return
+    }
+    if ((Test-Path -LiteralPath $tagDir) -and -not $hasExpectedFile) {
+        Write-Host "[WARN] Cached UniverseLAN $safeTag folder exists but looks incomplete - re-downloading."
     }
 
     $zipAssets = @($release.assets | Where-Object { $_.name -like '*.zip' })

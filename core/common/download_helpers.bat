@@ -71,7 +71,7 @@ set "GBE_TAG="
 set "GSE_TAG="
 
 set "GBE_CACHE_DIR=%FCT_CACHE_DIR%"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$h=@{'User-Agent'='AchievementEnablerSetup'}; $lines=@(); function Get-LatestTag($owner,$repo) { try { $r=Invoke-RestMethod -Headers $h -Uri ('https://api.github.com/repos/{0}/{1}/releases/latest' -f $owner,$repo); $t=if($r.tag_name){$r.tag_name}else{$r.name}; return $t.Split([IO.Path]::GetInvalidFileNameChars()) -join '_' } catch { return $null } }; function Get-CachedTag($root,$repo) { $d=Join-Path $root $repo; if(-not(Test-Path -LiteralPath $d)){return $null}; $sub=Get-ChildItem -LiteralPath $d -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if($sub){return $sub.Name}; return $null }; $gbeLatest=Get-LatestTag 'Detanup01' 'gbe_fork'; $gbeCached=Get-CachedTag $env:GBE_CACHE_DIR 'gbe_fork'; $gseLatest=Get-LatestTag 'alex47exe' 'gse_fork_tools'; $gseCached=Get-CachedTag $env:GBE_CACHE_DIR 'gse_fork_tools'; Write-Host ('[INFO] GBE Fork  - cached: {0}  latest: {1}' -f $gbeCached,$gbeLatest); Write-Host ('[INFO] GSE Tools - cached: {0}  latest: {1}' -f $gseCached,$gseLatest); if($gbeLatest -and $gbeCached -and $gbeLatest -eq $gbeCached){$lines+='set GBE_SKIP_DL=1'; $lines+=('set GBE_TAG='+$gbeCached); $exDir=Join-Path $env:GBE_CACHE_DIR ('gbe_fork\'+$gbeCached+'\release'); if(Test-Path -LiteralPath $exDir){$lines+='set GBE_SKIP_EX=1'}}; if($gseLatest -and $gseCached -and $gseLatest -eq $gseCached){$lines+='set GSE_SKIP_DL=1'; $lines+=('set GSE_TAG='+$gseCached); $exDir=Join-Path $env:GBE_CACHE_DIR ('gse_fork_tools\'+$gseCached+'\generate_emu_config'); if(Test-Path -LiteralPath $exDir){$lines+='set GSE_SKIP_EX=1'}}; if($lines){[System.IO.File]::WriteAllLines($env:TEMP+'\gbe_skip.cmd',$lines,[System.Text.Encoding]::ASCII)}"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$h=@{'User-Agent'='AchievementEnablerSetup'}; $lines=@(); function Get-LatestTag($owner,$repo) { try { $r=Invoke-RestMethod -Headers $h -Uri ('https://api.github.com/repos/{0}/{1}/releases/latest' -f $owner,$repo); $t=if($r.tag_name){$r.tag_name}else{$r.name}; return $t.Split([IO.Path]::GetInvalidFileNameChars()) -join '_' } catch { return $null } }; function Test-CachedTag($root,$repo,$tag,$extractedName) { if(-not $tag){return $false}; $d=Join-Path $root (Join-Path $repo $tag); $extracted=Join-Path $d $extractedName; if(-not(Test-Path -LiteralPath $extracted)){return $false}; return [bool](Get-ChildItem -LiteralPath $extracted -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1) }; $gbeLatest=Get-LatestTag 'Detanup01' 'gbe_fork'; $gseLatest=Get-LatestTag 'alex47exe' 'gse_fork_tools'; $gbeOk=Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'release'; $gseOk=Test-CachedTag $env:GBE_CACHE_DIR 'gse_fork_tools' $gseLatest 'generate_emu_config'; Write-Host ('[INFO] GBE Fork  - latest: {0}  cached: {1}' -f $(if($gbeLatest){$gbeLatest}else{'unknown'}),$(if($gbeOk){'yes'}else{'no'})); Write-Host ('[INFO] GSE Tools - latest: {0}  cached: {1}' -f $(if($gseLatest){$gseLatest}else{'unknown'}),$(if($gseOk){'yes'}else{'no'})); if($gbeOk){$lines+='set GBE_SKIP_DL=1'; $lines+='set GBE_SKIP_EX=1'; $lines+=('set GBE_TAG='+$gbeLatest)}; if($gseOk){$lines+='set GSE_SKIP_DL=1'; $lines+='set GSE_SKIP_EX=1'; $lines+=('set GSE_TAG='+$gseLatest)}; if($lines){[System.IO.File]::WriteAllLines($env:TEMP+'\gbe_skip.cmd',$lines,[System.Text.Encoding]::ASCII)}"
 
 if exist "%TEMP%\gbe_skip.cmd" (
     call "%TEMP%\gbe_skip.cmd"
@@ -84,10 +84,8 @@ if exist "%FCT_CACHE_DIR%\MissingLoader.txt" (
     set "GBE_SKIP_EX=0"
 )
 
-if "%GBE_SKIP_DL%"=="1" if "%GBE_SKIP_EX%"=="1" echo [INFO] GBE Fork is up to date and already extracted - skipping.
-if "%GBE_SKIP_DL%"=="1" if "%GBE_SKIP_EX%"=="0" echo [INFO] GBE Fork download skipped - re-extracting from cache.
-if "%GSE_SKIP_DL%"=="1" if "%GSE_SKIP_EX%"=="1" echo [INFO] GSE Tools is up to date and already extracted - skipping.
-if "%GSE_SKIP_DL%"=="1" if "%GSE_SKIP_EX%"=="0" echo [INFO] GSE Tools download skipped - re-extracting from cache.
+if "%GBE_SKIP_DL%"=="1" echo [INFO] GBE Fork is up to date and already cached - skipping.
+if "%GSE_SKIP_DL%"=="1" echo [INFO] GSE Tools is up to date and already cached - skipping.
 
 set "SEVENZR_PATH="
 if "%GBE_SKIP_EX%"=="1" if "%GSE_SKIP_EX%"=="1" goto :fct_skip_7zr
@@ -107,18 +105,11 @@ if "%GBE_SKIP_DL%"=="0" (
         echo [ERROR] Failed to download GBE Fork archive and no cached backup exists
         exit /b 1
     )
-    set "GBE_ARCHIVE_PATH=%DL_SELECTED_PATH%"
-    for %%P in ("%GBE_ARCHIVE_PATH%\..") do set "GBE_TAG=%%~nxP"
+    call set "GBE_ARCHIVE_PATH=%%DL_SELECTED_PATH%%"
+    call :ExtractGbe
+    if errorlevel 1 ( exit /b 1 )
 ) else (
-    set "GBE_ARCHIVE_PATH=%FCT_CACHE_DIR%\gbe_fork\%GBE_TAG%\emu-win-release.7z"
-)
-
-if "%GBE_SKIP_EX%"=="0" (
-    echo Extracting GBE Fork to cache...
-    "%SEVENZR_PATH%" x -y "%GBE_ARCHIVE_PATH%" -o"%FCT_CACHE_DIR%\gbe_fork\%GBE_TAG%"
-    if errorlevel 1 ( echo [ERROR] Extraction failed & exit /b 1 )
-) else (
-    echo [INFO] GBE Fork extraction skipped - using cached files.
+    echo [INFO] GBE Fork already extracted - using cached files.
 )
 echo Copying GBE Fork files to game folder...
 xcopy "%FCT_CACHE_DIR%\gbe_fork\%GBE_TAG%\release" "%FCT_GAME_FOLDER%\release\" /E /I /Y /Q
@@ -130,18 +121,11 @@ if "%GSE_SKIP_DL%"=="0" (
         echo [ERROR] Failed to download GSE Tools archive and no cached backup exists
         exit /b 1
     )
-    set "GSE_TOOLS_ARCHIVE_PATH=%DL_SELECTED_PATH%"
-    for %%P in ("%GSE_TOOLS_ARCHIVE_PATH%\..") do set "GSE_TAG=%%~nxP"
+    call set "GSE_TOOLS_ARCHIVE_PATH=%%DL_SELECTED_PATH%%"
+    call :ExtractGse
+    if errorlevel 1 ( exit /b 1 )
 ) else (
-    set "GSE_TOOLS_ARCHIVE_PATH=%FCT_CACHE_DIR%\gse_fork_tools\%GSE_TAG%\gen_emu_cfg-Windows-Release.7z"
-)
-
-if "%GSE_SKIP_EX%"=="0" (
-    echo Extracting GSE Tools to cache...
-    "%SEVENZR_PATH%" x -y "%GSE_TOOLS_ARCHIVE_PATH%" -o"%FCT_CACHE_DIR%\gse_fork_tools\%GSE_TAG%"
-    if errorlevel 1 ( echo [ERROR] Extraction failed & exit /b 1 )
-) else (
-    echo [INFO] GSE Tools extraction skipped - using cached files.
+    echo [INFO] GSE Tools already extracted - using cached files.
 )
 echo Copying GSE Tools files to game folder...
 xcopy "%FCT_CACHE_DIR%\gse_fork_tools\%GSE_TAG%\generate_emu_config" "%FCT_GAME_FOLDER%\generate_emu_config\" /E /I /Y /Q
@@ -161,4 +145,34 @@ if defined MISSING_LOADER (
 )
 
 echo GitHub download cache kept at %FCT_CACHE_DIR%
+exit /b 0
+
+REM :ExtractGbe / :ExtractGse are internal-only helpers used by :FetchCoreTools,
+REM called via plain same-file "call :Label" (not reachable through the
+REM external mode dispatch at the top). Each runs as its own batch statement,
+REM so %GBE_ARCHIVE_PATH% / %DL_SELECTED_PATH% etc. are expanded fresh at
+REM execution time - avoiding the classic "()-block expands all %VAR% once,
+REM before any command inside it runs" trap that caused an empty archive
+REM path to be passed to 7-Zip when this logic lived inline inside the
+REM if(...) ( ... ) block above.
+:ExtractGbe
+for %%P in ("%GBE_ARCHIVE_PATH%\..") do set "GBE_TAG=%%~nxP"
+echo Extracting GBE Fork to cache...
+"%SEVENZR_PATH%" x -y "%GBE_ARCHIVE_PATH%" -o"%FCT_CACHE_DIR%\gbe_fork\%GBE_TAG%"
+if errorlevel 1 (
+    echo [ERROR] Extraction failed
+    exit /b 1
+)
+del "%GBE_ARCHIVE_PATH%" >nul 2>&1
+exit /b 0
+
+:ExtractGse
+for %%P in ("%GSE_TOOLS_ARCHIVE_PATH%\..") do set "GSE_TAG=%%~nxP"
+echo Extracting GSE Tools to cache...
+"%SEVENZR_PATH%" x -y "%GSE_TOOLS_ARCHIVE_PATH%" -o"%FCT_CACHE_DIR%\gse_fork_tools\%GSE_TAG%"
+if errorlevel 1 (
+    echo [ERROR] Extraction failed
+    exit /b 1
+)
+del "%GSE_TOOLS_ARCHIVE_PATH%" >nul 2>&1
 exit /b 0
