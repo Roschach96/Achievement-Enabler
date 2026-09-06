@@ -435,22 +435,34 @@ if defined PY_EXE (
     start "" /B powershell -NoProfile -ExecutionPolicy Bypass -Command "$a = @(); if ($env:TOP_OWNERS_PY_ARG) { $a += $env:TOP_OWNERS_PY_ARG }; $a += @($env:COMMON_SCRIPT, '--txt-output', $env:TOP_OWNERS_TEMP_FILE); & $env:TOP_OWNERS_PY @a; $exitCode = $LASTEXITCODE; if ($exitCode -eq 0 -and (Test-Path -LiteralPath $env:TOP_OWNERS_TEMP_FILE)) { Move-Item -LiteralPath $env:TOP_OWNERS_TEMP_FILE -Destination $env:TOP_OWNERS_CACHE_FILE -Force; [IO.File]::WriteAllText($env:TOP_OWNERS_RESULT_CMD, 'set TOP_OWNERS_UPDATED=1', [Text.Encoding]::ASCII) } else { [IO.File]::WriteAllText($env:TOP_OWNERS_RESULT_CMD, 'set TOP_OWNERS_UPDATE_FAILED=1', [Text.Encoding]::ASCII) }" >"%TOP_OWNERS_LOG%" 2>&1
     set "TOP_OWNERS_STARTED=1"
 ) else (
-    echo [WARN] Python was not found. SteamLadder fallback will be unavailable.
-)
-echo.
-
-if exist "%TOP_OWNERS_CACHE_FILE%" (
-    if not exist "generate_emu_config" mkdir "generate_emu_config"
-    copy /Y "%TOP_OWNERS_CACHE_FILE%" "generate_emu_config\top_owners_ids.txt" >nul
-    set "GSE_FORK_TOOLS_DIR=%SystemDrive%\steamcmd\_GBE fork\gse_fork_tools"
-    if exist "%GSE_FORK_TOOLS_DIR%" (
-        for /d %%D in ("%GSE_FORK_TOOLS_DIR%\*") do (
-            if exist "%%D\generate_emu_config" copy /Y "%TOP_OWNERS_CACHE_FILE%" "%%D\generate_emu_config\top_owners_ids.txt" >nul 2>&1
+    set "GSE_BASE_LIST_TAG="
+    set "GSE_FORK_TOOLS_DIR_CHECK=%SystemDrive%\steamcmd\_GBE fork\gse_fork_tools"
+    if exist "%GSE_FORK_TOOLS_DIR_CHECK%" (
+        for /f "delims=" %%D in ('dir /b /ad /o-n "%GSE_FORK_TOOLS_DIR_CHECK%" 2^>nul') do (
+            if not defined GSE_BASE_LIST_TAG set "GSE_BASE_LIST_TAG=%%D"
         )
     )
-    echo [INFO] Using cached SteamLadder top-owners list.
-) else (
-    echo [INFO] No cached SteamLadder top-owners list is available yet.
+    echo [WARN] Python was not found.
+    echo [WARN] Python is needed here to fetch the SteamLadder top-owners list,
+    if defined GSE_BASE_LIST_TAG (
+        echo [WARN] Without it, the script will use the base list from
+        echo [WARN] gse_fork_tools instead, which only contains games up to
+        echo [WARN] %GSE_BASE_LIST_TAG%.
+    ) else (
+        echo [WARN] Without it, the script will use the base list from
+        echo [WARN] gse_fork_tools instead, which only contains games up to
+        echo [WARN] whatever date that copy of gse_fork_tools was released.
+    )
+    echo [WARN] Install Python from https://www.python.org/downloads/ 
+    echo [WARN] Be sure to select "Add python.exe to PATH" while installing,
+    echo [WARN] then rerun the script to enable this feature.
+    echo [WARN] Alternatively, you can follow this guide:
+    echo [WARN] https://cs.rin.ru/forum/viewtopic.php?p=3491938#p3491938
+    echo [WARN] Press Y to open that guide in your browser, or N to continue without it.
+    choice /C YN /N >nul
+    if errorlevel 2 goto :skip_guide_link
+    start "" "https://cs.rin.ru/forum/viewtopic.php?p=3491938#p3491938"
+    :skip_guide_link
 )
 echo.
 :skip_top_owners
