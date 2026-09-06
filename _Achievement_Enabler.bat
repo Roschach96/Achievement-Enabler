@@ -47,8 +47,6 @@ REM ============================================================================
 :main
 REM ============================================================================
 
-for /f "delims=" %%T in ('powershell -NoProfile -Command "(Get-Item -LiteralPath '%~f0').LastWriteTimeUtc.ToString('o')"') do set "SCRIPT_MTIME=%%T"
-
 echo ========================================
 echo    Achievement Enabler
 echo ========================================
@@ -57,18 +55,37 @@ echo This tool patches a game folder to run through a Goldberg-style Steam
 echo emulator (or Uplay R2, auto-detected) and enable achievements.
 echo.
 
+for /f "delims=" %%T in ('powershell -NoProfile -Command "(Get-Item -LiteralPath '%~f0').LastWriteTimeUtc.ToString('o')"') do set "SCRIPT_MTIME=%%T"
+
 REM ========================================
 REM Kick off the update check in the background - non-blocking.
-REM Compares this .bat file's own last-modified date against the publish
-REM date of every release at github.com/Roschach96/Achievement-Enabler.
+REM Once a %AE_STATE_DIR%\<tag>\ marker folder exists, compares against
+REM that tag's position in the release list. Until then (first run, no
+REM marker yet), falls back to comparing this .bat file's own last-modified
+REM date against each release's publish date.
 REM ========================================
-set "AE_STATE_DIR=%SystemDrive%\steamcmd\_GBE fork\AchievementEnabler"
+set "AE_STATE_DIR=%SystemDrive%\steamcmd\_AchievementEnabler"
 if not exist "%AE_STATE_DIR%" md "%AE_STATE_DIR%" >nul 2>&1
 set "UPDATE_RESULT_CMD=%AE_STATE_DIR%\ae_update_check_result.cmd"
 set "UPDATE_CHANGELOG_FILE=%AE_STATE_DIR%\ae_update_changelog.txt"
 set "UPDATE_LOG=%AE_STATE_DIR%\ae_update_check.log"
 if exist "%UPDATE_RESULT_CMD%" del /Q "%UPDATE_RESULT_CMD%" >nul 2>&1
 set "UPDATE_SKIP_FILE=%AE_STATE_DIR%\Achievement Enabler skipped versions.txt"
+
+REM Current installed tag = the newest %AE_STATE_DIR%\<tag>\ marker folder
+REM that exists on disk (tags sort latest-first by folder LastWriteTime,
+REM since a marker is only ever created for a tag just seen/skipped).
+REM No marker folders yet -> "unknown", so check_update.py falls back to
+REM comparing --current-mtime against each release's publish date instead
+REM (old method, used only until the first marker folder is created).
+set "AE_CURRENT_TAG=unknown"
+for /f "delims=" %%D in ('dir /B /AD /O:-D "%AE_STATE_DIR%" 2^>nul') do (
+    if not defined AE_CURRENT_TAG_FOUND (
+        set "AE_CURRENT_TAG=%%D"
+        set "AE_CURRENT_TAG_FOUND=1"
+    )
+)
+
 set "UC_PY="
 set "UC_PY_ARG="
 where py >nul 2>&1 && (set "UC_PY=py" & set "UC_PY_ARG=-3")
@@ -77,7 +94,7 @@ if not defined UC_PY (
 )
 set "UC_STARTED=0"
 if defined UC_PY (
-    start "" /B "%UC_PY%" %UC_PY_ARG% "%COMMON_DIR%\check_update.py" --current-mtime "%SCRIPT_MTIME%" --result-file "%UPDATE_RESULT_CMD%" --changelog-file "%UPDATE_CHANGELOG_FILE%" --skip-file "%UPDATE_SKIP_FILE%" >"%UPDATE_LOG%" 2>&1
+    start "" /B "%UC_PY%" %UC_PY_ARG% "%COMMON_DIR%\check_update.py" --current-tag "%AE_CURRENT_TAG%" --current-mtime "%SCRIPT_MTIME%" --result-file "%UPDATE_RESULT_CMD%" --changelog-file "%UPDATE_CHANGELOG_FILE%" --skip-file "%UPDATE_SKIP_FILE%" >"%UPDATE_LOG%" 2>&1
     set "UC_STARTED=1"
 )
 set "UC_PY="
@@ -459,7 +476,7 @@ if not defined PY_EXE (
 ) else (
     set "TOP_OWNERS_PY=%PY_EXE%"
     set "TOP_OWNERS_PY_ARG=%PY_VER_ARG%"
-    start "" /B powershell -NoProfile -ExecutionPolicy Bypass -Command "$a = @^(^); if ^($env:TOP_OWNERS_PY_ARG^) { $a += $env:TOP_OWNERS_PY_ARG }; $a += @^($env:COMMON_SCRIPT, '--txt-output', $env:TOP_OWNERS_TEMP_FILE^); & $env:TOP_OWNERS_PY @a; $exitCode = $LASTEXITCODE; if ^($exitCode -eq 0 -and ^(Test-Path -LiteralPath $env:TOP_OWNERS_TEMP_FILE^)^) { Move-Item -LiteralPath $env:TOP_OWNERS_TEMP_FILE -Destination $env:TOP_OWNERS_CACHE_FILE -Force; [IO.File]::WriteAllText^($env:TOP_OWNERS_RESULT_CMD, 'set TOP_OWNERS_UPDATED=1', [Text.Encoding]::ASCII^) } else { [IO.File]::WriteAllText^($env:TOP_OWNERS_RESULT_CMD, 'set TOP_OWNERS_UPDATE_FAILED=1', [Text.Encoding]::ASCII^) }" >"%TOP_OWNERS_LOG%" 2>&1
+    start "" /B powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand "JABhACAAPQAgAEAAKAApADsAIABpAGYAIAAoACQAZQBuAHYAOgBUAE8AUABfAE8AVwBOAEUAUgBTAF8AUABZAF8AQQBSAEcAKQAgAHsAIAAkAGEAIAArAD0AIAAkAGUAbgB2ADoAVABPAFAAXwBPAFcATgBFAFIAUwBfAFAAWQBfAEEAUgBHACAAfQA7ACAAJABhACAAKwA9ACAAQAAoACQAZQBuAHYAOgBDAE8ATQBNAE8ATgBfAFMAQwBSAEkAUABUACwAIAAnAC0ALQB0AHgAdAAtAG8AdQB0AHAAdQB0ACcALAAgACQAZQBuAHYAOgBUAE8AUABfAE8AVwBOAEUAUgBTAF8AVABFAE0AUABfAEYASQBMAEUAKQA7ACAAJgAgACQAZQBuAHYAOgBUAE8AUABfAE8AVwBOAEUAUgBTAF8AUABZACAAQABhADsAIAAkAGUAeABpAHQAQwBvAGQAZQAgAD0AIAAkAEwAQQBTAFQARQBYAEkAVABDAE8ARABFADsAIABpAGYAIAAoACQAZQB4AGkAdABDAG8AZABlACAALQBlAHEAIAAwACAALQBhAG4AZAAgACgAVABlAHMAdAAtAFAAYQB0AGgAIAAtAEwAaQB0AGUAcgBhAGwAUABhAHQAaAAgACQAZQBuAHYAOgBUAE8AUABfAE8AVwBOAEUAUgBTAF8AVABFAE0AUABfAEYASQBMAEUAKQApACAAewAgAE0AbwB2AGUALQBJAHQAZQBtACAALQBMAGkAdABlAHIAYQBsAFAAYQB0AGgAIAAkAGUAbgB2ADoAVABPAFAAXwBPAFcATgBFAFIAUwBfAFQARQBNAFAAXwBGAEkATABFACAALQBEAGUAcwB0AGkAbgBhAHQAaQBvAG4AIAAkAGUAbgB2ADoAVABPAFAAXwBPAFcATgBFAFIAUwBfAEMAQQBDAEgARQBfAEYASQBMAEUAIAAtAEYAbwByAGMAZQA7ACAAWwBJAE8ALgBGAGkAbABlAF0AOgA6AFcAcgBpAHQAZQBBAGwAbABUAGUAeAB0ACgAJABlAG4AdgA6AFQATwBQAF8ATwBXAE4ARQBSAFMAXwBSAEUAUwBVAEwAVABfAEMATQBEACwAIAAnAHMAZQB0ACAAVABPAFAAXwBPAFcATgBFAFIAUwBfAFUAUABEAEEAVABFAEQAPQAxACcALAAgAFsAVABlAHgAdAAuAEUAbgBjAG8AZABpAG4AZwBdADoAOgBBAFMAQwBJAEkAKQAgAH0AIABlAGwAcwBlACAAewAgAFsASQBPAC4ARgBpAGwAZQBdADoAOgBXAHIAaQB0AGUAQQBsAGwAVABlAHgAdAAoACQAZQBuAHYAOgBUAE8AUABfAE8AVwBOAEUAUgBTAF8AUgBFAFMAVQBMAFQAXwBDAE0ARAAsACAAJwBzAGUAdAAgAFQATwBQAF8ATwBXAE4ARQBSAFMAXwBVAFAARABBAFQARQBfAEYAQQBJAEwARQBEAD0AMQAnACwAIABbAFQAZQB4AHQALgBFAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkAIAB9AA==" >"%TOP_OWNERS_LOG%" 2>&1
     set "TOP_OWNERS_STARTED=1"
 )
 echo.
@@ -474,25 +491,40 @@ if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_gen_emu_config
 
 call generate_emu_config\generate_emu_config -acw %gameAppID%
 
-if not exist "generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\achievements.json" (
+set "AE_ACHIEVEMENTS_MISSING=0"
+if not exist "generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\achievements.json" set "AE_ACHIEVEMENTS_MISSING=1"
+
+if "%AE_ACHIEVEMENTS_MISSING%"=="1" (
     echo [INFO] No achievement data found. Waiting up to 30 seconds for the SteamLadder fallback list...
     if "%TOP_OWNERS_STARTED%"=="1" (
         powershell -NoProfile -Command "$until = [DateTime]::UtcNow.AddSeconds(30); while (-not (Test-Path -LiteralPath $env:TOP_OWNERS_RESULT_CMD) -and [DateTime]::UtcNow -lt $until) { Start-Sleep -Milliseconds 500 }; if (Test-Path -LiteralPath $env:TOP_OWNERS_RESULT_CMD) { exit 0 }; exit 1"
         if not errorlevel 1 if exist "%TOP_OWNERS_RESULT_CMD%" call "%TOP_OWNERS_RESULT_CMD%"
     )
+) else (
+    REM Achievements were already found - don't block the run for this.
+    REM Grab the result only if it happens to be ready already; if not,
+    REM it'll be picked up non-blocking at Step 14 near the end.
+    if "%TOP_OWNERS_STARTED%"=="1" if exist "%TOP_OWNERS_RESULT_CMD%" call "%TOP_OWNERS_RESULT_CMD%"
+)
+
     if defined TOP_OWNERS_UPDATED if exist "%TOP_OWNERS_CACHE_FILE%" (
         copy /Y "%TOP_OWNERS_CACHE_FILE%" "generate_emu_config\top_owners_ids.txt" >nul
         set "GSE_FORK_TOOLS_DIR=%SystemDrive%\steamcmd\_GBE fork\gse_fork_tools"
-        if exist "%GSE_FORK_TOOLS_DIR%" (
-            for /d %%D in ("%GSE_FORK_TOOLS_DIR%\*") do (
+    if exist "!GSE_FORK_TOOLS_DIR!" (
+        for /d %%D in ("!GSE_FORK_TOOLS_DIR!\*") do (
                 if exist "%%D\generate_emu_config" copy /Y "%TOP_OWNERS_CACHE_FILE%" "%%D\generate_emu_config\top_owners_ids.txt" >nul 2>&1
             )
         )
+    echo [INFO] SteamLadder top-owners cache refreshed.
+)
+
+if defined TOP_OWNERS_UPDATED (
+    if "%AE_ACHIEVEMENTS_MISSING%"=="1" (
         echo [INFO] SteamLadder list is ready; retrying achievement generation with the fallback list.
         call generate_emu_config\generate_emu_config -acw %gameAppID%
-    ) else (
-        echo [WARN] SteamLadder fallback list was not ready; continuing without it.
     )
+) else (
+    if "%AE_ACHIEVEMENTS_MISSING%"=="1" echo [WARN] SteamLadder fallback list was not ready; continuing without it.
 )
 
 REM Unzip extra_acw.zip if present (used both for Achievement Watcher export below
@@ -667,6 +699,19 @@ if "%VOICES38%"=="1" (
 REM ========================================
 REM STEP 14: Collect background update-check result
 REM ========================================
+if not defined TOP_OWNERS_UPDATED if "%TOP_OWNERS_STARTED%"=="1" if exist "%TOP_OWNERS_RESULT_CMD%" (
+    call "%TOP_OWNERS_RESULT_CMD%"
+    if defined TOP_OWNERS_UPDATED if exist "%TOP_OWNERS_CACHE_FILE%" (
+        copy /Y "%TOP_OWNERS_CACHE_FILE%" "generate_emu_config\top_owners_ids.txt" >nul
+        set "GSE_FORK_TOOLS_DIR=%SystemDrive%\steamcmd\_GBE fork\gse_fork_tools"
+        if exist "!GSE_FORK_TOOLS_DIR!" (
+            for /d %%D in ("!GSE_FORK_TOOLS_DIR!\*") do (
+                if exist "%%D\generate_emu_config" copy /Y "%TOP_OWNERS_CACHE_FILE%" "%%D\generate_emu_config\top_owners_ids.txt" >nul 2>&1
+            )
+        )
+        echo [INFO] SteamLadder top-owners cache refreshed.
+    )
+)
 if "%UC_STARTED%"=="1" (
     if exist "%UPDATE_RESULT_CMD%" (
         call "%UPDATE_RESULT_CMD%"
@@ -684,9 +729,13 @@ if defined UPDATE_AVAILABLE (
     choice /C YNS /N /M "Open releases page? (Y)es, (N)o, or (S)kip these versions: "
     if errorlevel 3 (
         for %%D in ("!UPDATE_SKIP_FILE!") do if not exist "%%~dpD" md "%%~dpD" >nul 2>&1
-        for %%T in (!UPDATE_TAGS!) do >>"!UPDATE_SKIP_FILE!" echo %%T
+        for %%T in (!UPDATE_TAGS!) do (
+            >>"!UPDATE_SKIP_FILE!" echo %%T
+            if not exist "!AE_STATE_DIR!\%%T" md "!AE_STATE_DIR!\%%T" >nul 2>&1
+        )
         echo [UPDATE] These versions will no longer be shown. Newer releases will still be checked.
     ) else if not errorlevel 2 (
+        for %%T in (!UPDATE_TAGS!) do if not exist "!AE_STATE_DIR!\%%T" md "!AE_STATE_DIR!\%%T" >nul 2>&1
         start "" "!REMOTE_URL!"
     )
 )

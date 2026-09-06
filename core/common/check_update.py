@@ -3,12 +3,22 @@
 # Checks the project's own GitHub repo for newer releases:
 #   https://github.com/Roschach96/Achievement-Enabler
 #
-# Compares the running .bat file's own last-modified date (passed in via
-# --current-mtime, an ISO-8601 UTC timestamp) against the publish date of
-# every release, and reports every release published after that date that
-# hasn't been explicitly skipped (--skip-file, one tag per line - the
-# caller is responsible for appending to it when the user chooses "skip").
-# Uses the public GitHub REST API only (no browser/Playwright needed).
+# Primary method: compares the currently-installed tag (--current-tag, the
+# name of the newest %SystemDrive%\steamcmd\_AchievementEnabler\<tag>\
+# marker folder that exists on disk) against the release list from the
+# GitHub API. Every release listed ABOVE --current-tag in the API's
+# (already latest-first) release list counts as "newer".
+#
+# Fallback method (used only when --current-tag is "unknown" or isn't
+# found in the release list - e.g. no marker folder exists yet on first
+# run): compares --current-mtime, an ISO-8601 UTC timestamp of the running
+# .bat file's own last-modified date, against each release's publish date.
+# This is the old method, kept around only for that transition period
+# before the first marker folder gets created.
+#
+# Either way, tags in --skip-file (one tag per line - the caller appends
+# to it when the user chooses "skip") are excluded. Uses the public GitHub
+# REST API only (no browser/Playwright needed).
 
 import argparse
 import json
@@ -57,8 +67,11 @@ def load_skip_set(skip_file):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--current-mtime", required=True,
-                         help="ISO-8601 UTC timestamp of the running .bat file's last write time")
+    parser.add_argument("--current-tag", required=True,
+                         help='Tag name of the newest installed marker folder, or "unknown" if none exists yet')
+    parser.add_argument("--current-mtime", default=None,
+                         help="ISO-8601 UTC timestamp of the running .bat file's last write time; "
+                              "used as a fallback only while --current-tag is unresolvable")
     parser.add_argument("--result-file", type=Path, default=DEFAULT_OUT_FILE)
     parser.add_argument("--changelog-file", type=Path, default=DEFAULT_CHANGELOG_FILE)
     parser.add_argument("--skip-file", type=Path, default=None,
@@ -69,12 +82,6 @@ def main():
     args.changelog_file.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        current_dt = parse_iso8601(args.current_mtime)
-    except ValueError as e:
-        print("[WARN] Could not parse --current-mtime '{0}': {1}".format(args.current_mtime, e))
-        return
-
-    try:
         releases = fetch_releases()
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError) as e:
         print("[WARN] Could not check {0} for updates: {1}".format(REPO_URL, e))
@@ -82,38 +89,68 @@ def main():
 
     skip_set = load_skip_set(args.skip_file)
 
-    newer = []
-    for release in releases:
-        if release.get("draft") or release.get("prerelease"):
-            continue
-        tag = release.get("tag_name") or "?"
-        published_raw = release.get("published_at") or release.get("created_at")
-        if not published_raw:
-            continue
-        try:
-            published_dt = parse_iso8601(published_raw)
-        except ValueError:
-            continue
-        if published_dt.date() <= current_dt.date():
-            continue
-        if tag in skip_set:
-            continue
-        newer.append({
-            "tag": tag,
-            "published": published_dt,
-            "body": (release.get("body") or "").strip(),
-            "url": release.get("html_url") or REPO_URL,
-        })
+    non_draft_releases = [
+        r for r in releases if not r.get("draft") and not r.get("prerelease")
+    ]
+
+    tag_found = any(
+        (r.get("tag_name") or "?") == args.current_tag for r in non_draft_releases
+    )
+
+    if tag_found:
+        # Releases come back latest-first. Everything up to (not including)
+        # the current tag's position is "newer".
+        newer = []
+        for release in non_draft_releases:
+            tag = release.get("tag_name") or "?"
+            if tag == args.current_tag:
+                break
+            if tag in skip_set:
+                continue
+            newer.append({
+                "tag": tag,
+                "body": (release.get("body") or "").strip(),
+                "url": release.get("html_url") or REPO_URL,
+            })
+    else:
+        # Fallback (old method): current tag is "unknown" or predates the
+        # API window - compare by publish date against --current-mtime instead.
+        current_dt = None
+        if args.current_mtime:
+            try:
+                current_dt = parse_iso8601(args.current_mtime)
+            except ValueError as e:
+                print("[WARN] Could not parse --current-mtime '{0}': {1}".format(args.current_mtime, e))
+
+        newer = []
+        for release in non_draft_releases:
+            tag = release.get("tag_name") or "?"
+            if tag in skip_set:
+                continue
+            if current_dt is not None:
+                published_raw = release.get("published_at") or release.get("created_at")
+                if not published_raw:
+                    continue
+                try:
+                    published_dt = parse_iso8601(published_raw)
+                except ValueError:
+                    continue
+                if published_dt.date() <= current_dt.date():
+                    continue
+            newer.append({
+                "tag": tag,
+                "body": (release.get("body") or "").strip(),
+                "url": release.get("html_url") or REPO_URL,
+            })
+        newer.reverse()  # oldest-missed-first, matching the tag-based branch's ordering
 
     if not newer:
         print("[INFO] No newer, non-skipped releases were found.")
         return
 
-    newer.sort(key=lambda r: r["published"])
-
     changelog_lines = []
-    for r in newer:
-        changelog_lines.append("{0}  (published {1})".format(r["tag"], r["published"].strftime("%Y-%m-%d")))
+    for r in reversed(newer):
+        changelog_lines.append(r["tag"])
         changelog_lines.append(r["body"] if r["body"] else "(no release notes)")
         changelog_lines.append("")
     args.changelog_file.write_text("\n".join(changelog_lines), encoding="utf-8")
@@ -128,7 +165,7 @@ def main():
         'set "CHANGELOG_FILE={0}"'.format(args.changelog_file),
     ]
     args.result_file.write_text("\n".join(lines) + "\n", encoding="ascii")
-    print("[INFO] {0} release(s) newer than this script were found.".format(len(newer)))
+    print("[INFO] {0} release(s) newer than the installed tag were found.".format(len(newer)))
 
 
 if __name__ == "__main__":
