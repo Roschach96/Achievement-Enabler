@@ -8,7 +8,7 @@ These need additional adapter files (check releases for more info):
 - Ubisoft (Uplay R1; Uplay R2)
 
 These don't need additional adapter files:
-- Epic (NemirtingasEpicEmulator) [Tested with Alan Wake but that needed a specific EOSSDK-Win64-Shipping.dll to launch]
+- Epic (NemirtingasEpicEmulator) [Tested with Alan Wake 2 and worked but that needed a specific EOSSDK-Win64-Shipping.dll to launch]
 - GOG (UniverseLAN)
 
 ## Usage
