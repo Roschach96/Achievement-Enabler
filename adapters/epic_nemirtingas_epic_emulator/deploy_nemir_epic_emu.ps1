@@ -114,7 +114,7 @@ function Invoke-DeployNemirEpicEmu {
             if (-not (Test-Path -LiteralPath $imagesDst)) {
                 New-Item -ItemType Directory -Path $imagesDst -Force | Out-Null
             }
-            Copy-Item -LiteralPath (Join-Path $imagesSrc '*') -Destination $imagesDst -Recurse -Force
+            Copy-Item -Path (Join-Path $imagesSrc '*') -Destination $imagesDst -Recurse -Force
             Write-Host "[INFO] Copied achievement images to: $imagesDst"
         } else {
             Write-Host "[WARN] achievements_images folder not found under: $AchievementsOutputDir"
