@@ -8,6 +8,7 @@ These need additional adapter files (check releases for more info):
 - Ubisoft (Uplay R1; Uplay R2)
 
 These don't need additional adapter files:
+- Epic (NemirtingasEpicEmulator) [Tested with Alan Wake but that needed a specific EOSSDK-Win64-Shipping.dll to launch]
 - GOG (UniverseLAN)
 
 ## Usage
@@ -217,8 +218,12 @@ Thank you buzarini for the [base download and extract part of the script's downl
 
 Thank you Valentine for [SteamStub patcher files](https://cs.rin.ru/forum/viewtopic.php?p=3193776#p3193776)
 
+Thank you D4rkz0mb1e, Kransekage, jacobneverstops, Emre_hitman47, Data_Dynamite4321, rektalbox, StevensND, suasif, dasafe, Fearless_Chang for your suggestions and feedbacks in the original projects before this project was merged
+
 Thank you demde for [UplayR1](https://cs.rin.ru/forum/viewtopic.php?p=3572254#p3572254) and [UplayR2](https://cs.rin.ru/forum/viewtopic.php?p=3526038#p3526038)
 
 Thank you grasmanek94 for [UniverseLAN](https://github.com/grasmanek94/UniverseLAN)
 
-Thank you D4rkz0mb1e, Kransekage, jacobneverstops, Emre_hitman47, Data_Dynamite4321, rektalbox, StevensND, suasif, dasafe, Fearless_Chang for your suggestions and feedbacks in the original projects before this project was merged from them
+Thank you JokerVerse for [Epic achievement fetch script](https://pserban93.github.io/Achievements-Docs/platforms.html#nemirtingas-epic-emu)
+
+Thank you for Nemirtingas for [NemirtingasEpicEmulator](https://gitlab.com/Nemirtingas/epicemulatorregistry)

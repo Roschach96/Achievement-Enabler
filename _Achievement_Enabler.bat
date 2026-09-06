@@ -19,14 +19,19 @@ REM   make_shortcut.ps1                 - create the desktop shortcut
 REM
 REM The Steam-schema chain (dummy credentials, steam_appid.txt/Steam Store
 REM AppID lookup, SteamCMD manifest fetch, generate_emu_config achievement
-REM data) is Steam-only and is skipped entirely when AE_ADAPTER_ID is
-REM gog_universelan - that adapter looks up its own GOG App ID from
-REM goggame-*.info inside modify_joker_json.ps1 and handles achievements
-REM separately.
+REM data) is Steam-only. It is skipped entirely whenever AE_STEAM_SCHEMA=0,
+REM which is set right after adapter selection for any non-Steam adapter:
+REM   - gog_universelan looks up its own GOG App ID from goggame-*.info
+REM     inside modify_joker_json.ps1
+REM   - epic_nemirtingas_epic_emulator looks up its Epic namespace/sandboxId
+REM     from egdata.app inside write_config.ps1
+REM Both handle their own achievement data separately.
 REM
 REM To support a new emulator later: add adapters\<new_id>\ with those five
 REM scripts, an adapter.json (id/name/priority/detect.asset_folder_glob), and
-REM a GameSample.json. Nothing in this file needs to change.
+REM a GameSample.json. If it also has no Steam schema, add one line next to
+REM the other AE_STEAM_SCHEMA=0 assignments below. Nothing else in this file
+REM needs to change.
 REM ============================================================================
 
 set "TOOLS_DIR=%~dp0"
@@ -130,6 +135,17 @@ echo [INFO] Using adapter: %AE_ADAPTER_NAME%  (id: %AE_ADAPTER_ID%)
 echo.
 
 REM ========================================
+REM Non-Steam adapters (no Steam schema/manifest to fetch - they resolve
+REM their own App ID and achievement data independently) are listed here
+REM once. Every downstream Steam-only step gates on AE_STEAM_SCHEMA instead
+REM of repeating an adapter-id check, so adding another non-Steam adapter
+REM later only requires editing this one line.
+REM ========================================
+set "AE_STEAM_SCHEMA=1"
+if "%AE_ADAPTER_ID%"=="gog_universelan" set "AE_STEAM_SCHEMA=0"
+if "%AE_ADAPTER_ID%"=="epic_nemirtingas_epic_emulator" set "AE_STEAM_SCHEMA=0"
+
+REM ========================================
 REM STEP 1b: Automatic crack-state pre-flight checks (no user prompt)
 REM Search excludes core\ and adapters\ - our own shipped ubisoft_uplay_r2
 REM asset pack contains template copies of uplay_r2.ini/upc_r2.ini, which
@@ -187,7 +203,7 @@ REM Steam-only (Goldberg loader/generate_interfaces + generate_emu_config) -
 REM skipped entirely for gog_universelan, which uses none of it.
 REM ========================================
 set "GBE_CACHE_DIR=%SystemDrive%\steamcmd\_GBE fork"
-if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_core_tools
+if "%AE_STEAM_SCHEMA%"=="0" goto :skip_core_tools
 
 echo Fetching shared emulator tooling (GBE Fork + GSE Tools)...
 call "%COMMON_DIR%\download_helpers.bat" FetchCoreTools "%gameFolder%" "%GBE_CACHE_DIR%"
@@ -238,7 +254,7 @@ REM gog_universelan skips this entirely and needs no dummy_account.txt.)
 REM ========================================
 set "GSE_CFG_USERNAME="
 set "GSE_CFG_PASSWORD="
-if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_dummy_creds
+if "%AE_STEAM_SCHEMA%"=="0" goto :skip_dummy_creds
 
 set "dummyCredsFile=%TOOLS_DIR%dummy_account.txt"
 if not exist "%dummyCredsFile%" (
@@ -283,7 +299,7 @@ echo.
 set "gameAppID="
 set "LAUNCH_ARGS="
 
-if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_steam_appid
+if "%AE_STEAM_SCHEMA%"=="0" goto :skip_steam_appid
 
 set "foundAppIDFile="
 if exist "%gameFolder%\steam_appid.txt" (
@@ -430,7 +446,7 @@ REM generate_emu_config and has no use for this cache.)
 REM ========================================
 set "TOP_OWNERS_STARTED=0"
 set "TOP_OWNERS_UPDATED="
-if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_top_owners
+if "%AE_STEAM_SCHEMA%"=="0" goto :skip_top_owners
 
 set "TOP_OWNERS_RESULT_CMD=%AE_STATE_DIR%\ae_top_owners_result.cmd"
 set "TOP_OWNERS_CACHE_FILE=%AE_STATE_DIR%\top_owners_ids.txt"
@@ -487,7 +503,7 @@ REM STEP 9: Generate achievement data (Steam-schema only - skipped for
 REM gog_universelan, which has no Steam achievement schema to fetch and
 REM handles achievements separately.)
 REM ========================================
-if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_gen_emu_config
+if "%AE_STEAM_SCHEMA%"=="0" goto :skip_gen_emu_config
 
 call generate_emu_config\generate_emu_config -acw %gameAppID%
 
@@ -595,7 +611,7 @@ REM ========================================
 REM STEP 11: Achievement Watcher export (Steam-only - Achievement Watcher
 REM tracks Steam achievement caches, so this is skipped for gog_universelan)
 REM ========================================
-if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_acw
+if "%AE_STEAM_SCHEMA%"=="0" goto :skip_acw
 if not exist "%AppData%\Achievement Watcher\steam_cache\schema" (
     echo Achievement Watcher schema folder not found, skipping.
     goto :skip_acw
@@ -634,6 +650,8 @@ if not exist "%AppData%\Achievements\" (
 set "targetDir=%AppData%\Achievements\configs"
 if "%AE_ADAPTER_ID%"=="gog_universelan" (
     set "targetJsonPath=%targetDir%\%gameName% (GOG).json"
+) else if "%AE_ADAPTER_ID%"=="epic_nemirtingas_epic_emulator" (
+    set "targetJsonPath=%targetDir%\%gameName% (Epic).json"
 ) else (
 set "targetJsonPath=%targetDir%\%gameName%.json"
 )
@@ -653,7 +671,7 @@ if errorlevel 1 (
 echo [INFO] Config written to: %targetJsonPath%
 echo.
 
-if "%AE_ADAPTER_ID%"=="gog_universelan" goto :skip_steam_joker
+if "%AE_STEAM_SCHEMA%"=="0" goto :skip_steam_joker
 
 set "gseTarget=%AppData%\Achievements\configs\schema\steam\%gameAppID%"
 if exist "generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\" (

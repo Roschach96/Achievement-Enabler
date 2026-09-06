@@ -1,0 +1,39 @@
+{
+  "EOSEmu": {
+    "Achievements": {
+      "OnlineDatabase": ""
+    },
+    "Application": {
+      "AppId": "00000000000000000000000000000000",
+      "DisableCrashDump": false,
+      "DisableOnlineNetworking": false,
+      "LogLevel": "off",
+      "SavePath": "appdata"
+    },
+    "Ecom": {
+      "UnlockDlcs": true
+    },
+    "Plugins": {
+      "Overlay": {
+        "Enabled": true
+      }
+    },
+    "User": {
+      "EpicId": "17380c2a51230d05a341a2319657af57",
+      "Language": "en",
+      "ProductUserId": "918df96202f91f6be46edc83b9336423",
+      "UserName": "DefaultName"
+    }
+  },
+  "Network": {
+    "IceServers": [],
+    "Plugins": {
+      "Broadcast": {
+        "Enabled": false
+      },
+      "WebSocket": {
+        "SignalingServers": []
+      }
+    }
+  }
+}

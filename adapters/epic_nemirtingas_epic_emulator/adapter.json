@@ -1,0 +1,11 @@
+{
+  "id": "epic_nemirtingas_epic_emulator",
+  "name": "Epic (Nemirtingas Epic Emulator)",
+  "priority": 40,
+  "detect": {
+    "loader_dll_names": ["EOSSDK-Win64-Shipping.dll", "EOSSDK-Win32-Shipping.dll"],
+    "is_default": false
+  },
+  "assets_folder_glob": null,
+  "notes": "Auto-selected when EOSSDK-Win64-Shipping.dll or EOSSDK-Win32-Shipping.dll is found anywhere in the game folder. No bundled asset pack: write_config.ps1 downloads and caches Nemirtingas EpicEmulatorRegistry releases from GitLab under %SystemDrive%\\steamcmd\\_Epic\\NemirtingasEpicEmu on first run. The Epic namespace/sandboxId is looked up from egdata.app by game name (epic_namespace_lookup.ps1)"
+}
