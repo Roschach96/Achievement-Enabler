@@ -78,10 +78,10 @@ function Invoke-DeployNemirEpicEmu {
         Write-Host "[WARN] No $noNetworkName found under: $SourceReleaseDir"
     }
 
-    # ---- Copy nepice_settings (NemirtingasEpicEmu.json template) into place --
-    $settingsSrc = Join-Path $AdapterDir 'nepice_settings'
+    # ---- Copy NemirtingasEpicEmu.json template into place ---------------------
+    $settingsSrc = $AdapterDir
     $settingsDst = Join-Path $destination 'nepice_settings'
-    if (Test-Path -LiteralPath $settingsSrc) {
+    if (Test-Path -LiteralPath (Join-Path $settingsSrc 'NemirtingasEpicEmu.json')) {
         if (-not (Test-Path -LiteralPath $settingsDst)) {
             New-Item -ItemType Directory -Path $settingsDst -Force | Out-Null
         }

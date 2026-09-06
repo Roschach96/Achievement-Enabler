@@ -651,7 +651,7 @@ set "targetDir=%AppData%\Achievements\configs"
 if "%AE_ADAPTER_ID%"=="gog_universelan" (
     set "targetJsonPath=%targetDir%\%gameName% (GOG).json"
 ) else if "%AE_ADAPTER_ID%"=="epic_nemirtingas_epic_emulator" (
-    set "targetJsonPath=%targetDir%\%gameName% (Epic).json"
+    set "targetJsonPath=%targetDir%\%gameName%.json"
 ) else (
 set "targetJsonPath=%targetDir%\%gameName%.json"
 )
