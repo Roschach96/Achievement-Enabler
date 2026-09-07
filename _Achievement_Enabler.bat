@@ -89,9 +89,15 @@ if not defined AE_BACKUP_DIR (
         pause
         exit /b 1
     )
-    if not exist "!AE_BACKUP_DIR!" md "!AE_BACKUP_DIR!" >nul 2>&1
-    >"%AE_BACKUP_CONFIG%" echo !AE_BACKUP_DIR!
+    call :SaveBackupDir
 )
+goto :after_backup_dir_setup
+
+:SaveBackupDir
+if not exist "!AE_BACKUP_DIR!" md "!AE_BACKUP_DIR!" >nul 2>&1
+>"%AE_BACKUP_CONFIG%" echo !AE_BACKUP_DIR!
+exit /b 0
+:after_backup_dir_setup
 
 set "UPDATE_RESULT_CMD=%AE_STATE_DIR%\ae_update_check_result.cmd"
 set "UPDATE_CHANGELOG_FILE=%AE_STATE_DIR%\ae_update_changelog.txt"
@@ -125,22 +131,25 @@ if not defined AE_CURRENT_TAG_FOUND (
     echo.
     echo [INFO] No installed version on record yet - fetching the latest release to establish one...
     powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { $h=@{'User-Agent'='AchievementEnablerSetup'}; $r=Invoke-RestMethod -Headers $h -Uri 'https://api.github.com/repos/Roschach96/Achievement-Enabler/releases/latest'; Write-Output $r.tag_name } catch { exit 1 }" >"%TEMP%\ae_bootstrap_tag.txt" 2>nul
-    if errorlevel 1 (
-        echo [WARN] Could not reach GitHub to determine the latest release. Continuing with "unknown" - will retry next run.
-    ) else (
-        set /p "AE_BOOTSTRAP_TAG=" <"%TEMP%\ae_bootstrap_tag.txt"
-        if defined AE_BOOTSTRAP_TAG (
-            call "%COMMON_DIR%\download_helpers.bat" FetchSelfUpdate "!AE_BOOTSTRAP_TAG!" "!AE_STATE_DIR!" "!AE_BACKUP_DIR!"
-            if errorlevel 1 (
-                echo [WARN] Bootstrap download of !AE_BOOTSTRAP_TAG! failed. Continuing with "unknown" - will retry next run.
-            ) else (
-                set "AE_CURRENT_TAG=!AE_BOOTSTRAP_TAG!"
-                echo [INFO] Established !AE_BOOTSTRAP_TAG! as the current version. Copied to Backup folder: !AE_BACKUP_DIR!
-            )
-        )
-    )
+    set "AE_BOOTSTRAP_QUERY_OK=!errorlevel!"
+    if "!AE_BOOTSTRAP_QUERY_OK!"=="0" call :ApplyBootstrap
+    if not "!AE_BOOTSTRAP_QUERY_OK!"=="0" echo [WARN] Could not reach GitHub to determine the latest release. Continuing with "unknown" - will retry next run.
     del "%TEMP%\ae_bootstrap_tag.txt" >nul 2>&1
 )
+goto :after_bootstrap
+
+:ApplyBootstrap
+set /p "AE_BOOTSTRAP_TAG=" <"%TEMP%\ae_bootstrap_tag.txt"
+if not defined AE_BOOTSTRAP_TAG exit /b 0
+call "%COMMON_DIR%\download_helpers.bat" FetchSelfUpdate "!AE_BOOTSTRAP_TAG!" "!AE_STATE_DIR!" "!AE_BACKUP_DIR!"
+if errorlevel 1 (
+    echo [WARN] Bootstrap download of !AE_BOOTSTRAP_TAG! failed. Continuing with "unknown" - will retry next run.
+) else (
+    set "AE_CURRENT_TAG=!AE_BOOTSTRAP_TAG!"
+    echo [INFO] Established !AE_BOOTSTRAP_TAG! as the current version. Copied to Backup folder: !AE_BACKUP_DIR!
+)
+exit /b 0
+:after_bootstrap
 
 set "UC_PY="
 set "UC_PY_ARG="
@@ -796,22 +805,30 @@ if defined UPDATE_AVAILABLE (
         echo -----------------------------
     )
     choice /C YNS /N /M "Download and update now? (Y)es, (N)o, or (S)kip these versions: "
-    if errorlevel 3 (
-        for %%D in ("!UPDATE_SKIP_FILE!") do if not exist "%%~dpD" md "%%~dpD" >nul 2>&1
-        for %%T in (!UPDATE_TAGS!) do >>"!UPDATE_SKIP_FILE!" echo %%T
-        echo [UPDATE] These versions will no longer be shown. Newer releases will still be checked.
-    ) else if not errorlevel 2 (
-        REM Newest tag is the first one in UPDATE_TAGS (latest-first order).
-        for /f "tokens=1" %%T in ("!UPDATE_TAGS!") do set "AE_NEW_TAG=%%T"
-        call "%COMMON_DIR%\download_helpers.bat" FetchSelfUpdate "!AE_NEW_TAG!" "!AE_STATE_DIR!" "!AE_BACKUP_DIR!"
-        if errorlevel 1 (
-            echo [ERROR] Update download failed. Opening releases page instead.
-            start "" "!REMOTE_URL!"
-        ) else (
-            echo [UPDATE] Updated to !AE_NEW_TAG! and copied to Backup folder: !AE_BACKUP_DIR!
-        )
-    )
+    set "AE_UPDATE_CHOICE=!errorlevel!"
+    if "!AE_UPDATE_CHOICE!"=="3" call :SkipUpdateVersions
+    if "!AE_UPDATE_CHOICE!"=="1" call :ApplyUpdate
 )
+goto :after_update_check
+
+:SkipUpdateVersions
+for %%D in ("!UPDATE_SKIP_FILE!") do if not exist "%%~dpD" md "%%~dpD" >nul 2>&1
+for %%T in (!UPDATE_TAGS!) do >>"!UPDATE_SKIP_FILE!" echo %%T
+echo [UPDATE] These versions will no longer be shown. Newer releases will still be checked.
+exit /b 0
+
+:ApplyUpdate
+REM Newest tag is the first one in UPDATE_TAGS (latest-first order).
+for /f "tokens=1" %%T in ("!UPDATE_TAGS!") do set "AE_NEW_TAG=%%T"
+call "%COMMON_DIR%\download_helpers.bat" FetchSelfUpdate "!AE_NEW_TAG!" "!AE_STATE_DIR!" "!AE_BACKUP_DIR!"
+if errorlevel 1 (
+    echo [ERROR] Update download failed. Opening releases page instead.
+    start "" "!REMOTE_URL!"
+) else (
+    echo [UPDATE] Updated to !AE_NEW_TAG! and copied to Backup folder: !AE_BACKUP_DIR!
+)
+exit /b 0
+:after_update_check
 
 REM ========================================
 REM STEP 15: Final cleanup - only the patched game + shortcut should remain

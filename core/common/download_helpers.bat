@@ -204,26 +204,42 @@ set "FSU_TAG_DIR=%FSU_STATE_DIR%\%FSU_TAG%"
 if not exist "%FSU_TAG_DIR%" md "%FSU_TAG_DIR%" >nul 2>&1
 
 set "FSU_ZIP=%FSU_TAG_DIR%\source.zip"
-echo Downloading Achievement Enabler %FSU_TAG%...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $progressPreference='silentlyContinue'; $h=@{'User-Agent'='AchievementEnablerSetup'}; try { $rel = Invoke-RestMethod -Headers $h -Uri ('https://api.github.com/repos/Roschach96/Achievement-Enabler/releases/tags/{0}' -f $env:FSU_TAG); $asset = $rel.assets | Where-Object { $_.name -like '*.zip' } | Select-Object -First 1; $uri = if ($asset) { $asset.browser_download_url } else { $rel.zipball_url }; Invoke-WebRequest -Headers $h -Uri $uri -OutFile $env:FSU_ZIP } catch { Write-Host ('[ERROR] {0}' -f $_.Exception.Message); exit 1 }"
-if errorlevel 1 (
-    echo [ERROR] Failed to download release %FSU_TAG%
-    exit /b 1
-)
+set "FSU_UNZIP=%FSU_TAG_DIR%\_unzip"
+set "FSU_PS1=%TEMP%\ae_fetch_self_update.ps1"
 
-echo Extracting...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { Expand-Archive -LiteralPath $env:FSU_ZIP -DestinationPath (Join-Path $env:FSU_TAG_DIR '_unzip') -Force } catch { Write-Host ('[ERROR] {0}' -f $_.Exception.Message); exit 1 }"
+REM Written line-by-line with individual >> appends (no enclosing parens)
+REM so cmd.exe's block parser never has to deal with PowerShell's own
+REM parens/braces at all - only the .ps1 file interprets those.
+del "%FSU_PS1%" >nul 2>&1
+>>"%FSU_PS1%" echo $ErrorActionPreference = 'Stop'
+>>"%FSU_PS1%" echo $progressPreference = 'silentlyContinue'
+>>"%FSU_PS1%" echo $h = @{'User-Agent'='AchievementEnablerSetup'}
+>>"%FSU_PS1%" echo try {
+>>"%FSU_PS1%" echo     $rel = Invoke-RestMethod -Headers $h -Uri (('https://api.github.com/repos/Roschach96/Achievement-Enabler/releases/tags/{0}') -f $env:FSU_TAG)
+>>"%FSU_PS1%" echo     $asset = $rel.assets ^| Where-Object { $_.name -like '*.zip' } ^| Select-Object -First 1
+>>"%FSU_PS1%" echo     $uri = if ($asset) { $asset.browser_download_url } else { $rel.zipball_url }
+>>"%FSU_PS1%" echo     Invoke-WebRequest -Headers $h -Uri $uri -OutFile $env:FSU_ZIP
+>>"%FSU_PS1%" echo     Expand-Archive -LiteralPath $env:FSU_ZIP -DestinationPath $env:FSU_UNZIP -Force
+>>"%FSU_PS1%" echo } catch {
+>>"%FSU_PS1%" echo     Write-Host ('[ERROR] ' + $_.Exception.Message)
+>>"%FSU_PS1%" echo     exit 1
+>>"%FSU_PS1%" echo }
+
+echo Downloading Achievement Enabler %FSU_TAG%...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%FSU_PS1%"
 if errorlevel 1 (
-    echo [ERROR] Extraction failed
+    del "%FSU_PS1%" >nul 2>&1
+    echo [ERROR] Failed to download or extract release %FSU_TAG%
     exit /b 1
 )
+del "%FSU_PS1%" >nul 2>&1
 del "%FSU_ZIP%" >nul 2>&1
 
 REM Handle both possible zip shapes: a release asset zip usually has files
 REM directly at its root; GitHub's auto-generated source zipball wraps
 REM everything in a single "Achievement-Enabler-<tag>" folder instead.
-set "FSU_UNZIP=%FSU_TAG_DIR%\_unzip"
 set "FSU_WRAPPER="
+set "FSU_ENTRY_COUNT="
 for /f "delims=" %%C in ('dir /B "%FSU_UNZIP%" 2^>nul ^| find /C /V ""') do set "FSU_ENTRY_COUNT=%%C"
 if "%FSU_ENTRY_COUNT%"=="1" (
     for /d %%D in ("%FSU_UNZIP%\*") do set "FSU_WRAPPER=%%D"
@@ -235,15 +251,24 @@ if defined FSU_WRAPPER (
 )
 rmdir /S /Q "%FSU_UNZIP%" >nul 2>&1
 
-if not defined FSU_BACKUP_DIR (
-    echo [WARN] No Backup folder set - skipping copy step.
-    exit /b 0
-)
+if not defined FSU_BACKUP_DIR goto :fsu_skip_backup_copy
 if not exist "%FSU_BACKUP_DIR%" md "%FSU_BACKUP_DIR%" >nul 2>&1
 echo Copying to Backup folder: %FSU_BACKUP_DIR%
 xcopy "%FSU_TAG_DIR%" "%FSU_BACKUP_DIR%\" /E /I /Y /Q >nul
 if errorlevel 1 (
     echo [ERROR] Copy to Backup folder failed
     exit /b 1
+)
+goto :fsu_backup_copy_done
+:fsu_skip_backup_copy
+echo [WARN] No Backup folder set - skipping copy step.
+:fsu_backup_copy_done
+
+REM Only now that the new version is fully extracted (and copied to the
+REM Backup folder, if one is set) do we remove older %FSU_STATE_DIR%\<tag>
+REM folders, so a failed download/extract/copy never leaves zero versions
+REM on disk.
+for /d %%D in ("%FSU_STATE_DIR%\*") do (
+    if /I not "%%~nxD"=="%FSU_TAG%" rmdir /S /Q "%%D" >nul 2>&1
 )
 exit /b 0
