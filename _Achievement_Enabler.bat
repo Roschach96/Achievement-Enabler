@@ -71,6 +71,29 @@ REM date against each release's publish date.
 REM ========================================
 set "AE_STATE_DIR=%SystemDrive%\steamcmd\_AchievementEnabler"
 if not exist "%AE_STATE_DIR%" md "%AE_STATE_DIR%" >nul 2>&1
+
+REM ========================================
+REM Backup folder: where the updater copies the latest downloaded
+REM release so the script always knows the "current version" is whatever
+REM sits in %AE_STATE_DIR%. Asked once, then cached in a config file.
+REM ========================================
+set "AE_BACKUP_CONFIG=%AE_STATE_DIR%\backup_folder.cfg"
+set "AE_BACKUP_DIR="
+if exist "%AE_BACKUP_CONFIG%" (
+    for /f "usebackq delims=" %%B in ("%AE_BACKUP_CONFIG%") do set "AE_BACKUP_DIR=%%B"
+)
+if not defined AE_BACKUP_DIR (
+    echo.
+    set /p "AE_BACKUP_DIR=Enter the Backup folder for Achievement Enabler (used to keep/update your copy of the script): "
+    if not defined AE_BACKUP_DIR (
+        echo [ERROR] A Backup folder is required. Rerun the script and provide one.
+        pause
+        exit /b 1
+    )
+    if not exist "!AE_BACKUP_DIR!" md "!AE_BACKUP_DIR!" >nul 2>&1
+    >"%AE_BACKUP_CONFIG%" echo !AE_BACKUP_DIR!
+)
+
 set "UPDATE_RESULT_CMD=%AE_STATE_DIR%\ae_update_check_result.cmd"
 set "UPDATE_CHANGELOG_FILE=%AE_STATE_DIR%\ae_update_changelog.txt"
 set "UPDATE_LOG=%AE_STATE_DIR%\ae_update_check.log"
@@ -89,6 +112,35 @@ for /f "delims=" %%D in ('dir /B /AD /O:-D "%AE_STATE_DIR%" 2^>nul') do (
         set "AE_CURRENT_TAG=%%D"
         set "AE_CURRENT_TAG_FOUND=1"
     )
+)
+
+REM ========================================
+REM First run: no %AE_STATE_DIR%\<tag>\ folder exists yet, so there is no
+REM baseline to compare against. Rather than starting from "unknown" and
+REM only catching up on the NEXT run, fetch the latest release right now
+REM (synchronously - this has to finish before anything below can rely on
+REM a known-current script version) and apply it, so this run already has
+REM a real starting point on disk.
+REM ========================================
+if not defined AE_CURRENT_TAG_FOUND (
+    echo.
+    echo [INFO] No installed version on record yet - fetching the latest release to establish one...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { $h=@{'User-Agent'='AchievementEnablerSetup'}; $r=Invoke-RestMethod -Headers $h -Uri 'https://api.github.com/repos/Roschach96/Achievement-Enabler/releases/latest'; Write-Output $r.tag_name } catch { exit 1 }" >"%TEMP%\ae_bootstrap_tag.txt" 2>nul
+    if errorlevel 1 (
+        echo [WARN] Could not reach GitHub to determine the latest release. Continuing with "unknown" - will retry next run.
+    ) else (
+        set /p "AE_BOOTSTRAP_TAG=" <"%TEMP%\ae_bootstrap_tag.txt"
+        if defined AE_BOOTSTRAP_TAG (
+            call "%COMMON_DIR%\download_helpers.bat" FetchSelfUpdate "!AE_BOOTSTRAP_TAG!" "!AE_STATE_DIR!" "!AE_BACKUP_DIR!"
+            if errorlevel 1 (
+                echo [WARN] Bootstrap download of !AE_BOOTSTRAP_TAG! failed. Continuing with "unknown" - will retry next run.
+            ) else (
+                set "AE_CURRENT_TAG=!AE_BOOTSTRAP_TAG!"
+                echo [INFO] Established !AE_BOOTSTRAP_TAG! as the current version. Copied to Backup folder: !AE_BACKUP_DIR!
+            )
+        )
+    )
+    del "%TEMP%\ae_bootstrap_tag.txt" >nul 2>&1
 )
 
 set "UC_PY="
@@ -744,17 +796,21 @@ if defined UPDATE_AVAILABLE (
         type "!CHANGELOG_FILE!"
         echo -----------------------------
     )
-    choice /C YNS /N /M "Open releases page? (Y)es, (N)o, or (S)kip these versions: "
+    choice /C YNS /N /M "Download and update now? (Y)es, (N)o, or (S)kip these versions: "
     if errorlevel 3 (
         for %%D in ("!UPDATE_SKIP_FILE!") do if not exist "%%~dpD" md "%%~dpD" >nul 2>&1
-        for %%T in (!UPDATE_TAGS!) do (
-            >>"!UPDATE_SKIP_FILE!" echo %%T
-            if not exist "!AE_STATE_DIR!\%%T" md "!AE_STATE_DIR!\%%T" >nul 2>&1
-        )
+        for %%T in (!UPDATE_TAGS!) do >>"!UPDATE_SKIP_FILE!" echo %%T
         echo [UPDATE] These versions will no longer be shown. Newer releases will still be checked.
     ) else if not errorlevel 2 (
-        for %%T in (!UPDATE_TAGS!) do if not exist "!AE_STATE_DIR!\%%T" md "!AE_STATE_DIR!\%%T" >nul 2>&1
-        start "" "!REMOTE_URL!"
+        REM Newest tag is the first one in UPDATE_TAGS (latest-first order).
+        for /f "tokens=1" %%T in ("!UPDATE_TAGS!") do set "AE_NEW_TAG=%%T"
+        call "%COMMON_DIR%\download_helpers.bat" FetchSelfUpdate "!AE_NEW_TAG!" "!AE_STATE_DIR!" "!AE_BACKUP_DIR!"
+        if errorlevel 1 (
+            echo [ERROR] Update download failed. Opening releases page instead.
+            start "" "!REMOTE_URL!"
+        ) else (
+            echo [UPDATE] Updated to !AE_NEW_TAG! and copied to Backup folder: !AE_BACKUP_DIR!
+        )
     )
 )
 

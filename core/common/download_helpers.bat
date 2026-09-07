@@ -13,6 +13,7 @@ REM in the CALLER's environment, exactly like the original monolithic scripts di
 
 set "DH_MODE=%~1"
 if /I "%DH_MODE%"=="FetchCoreTools" goto :FetchCoreTools
+if /I "%DH_MODE%"=="FetchSelfUpdate" goto :FetchSelfUpdate
 echo [ERROR] download_helpers.bat: unknown mode "%DH_MODE%"
 exit /b 1
 
@@ -175,4 +176,74 @@ if errorlevel 1 (
     exit /b 1
 )
 del "%GSE_TOOLS_ARCHIVE_PATH%" >nul 2>&1
+exit /b 0
+
+REM ==========================================================================
+REM :FetchSelfUpdate  <Tag>  <AE_STATE_DIR>  <BackupFolder>
+REM
+REM Downloads the project's own release zip (Roschach96/Achievement-Enabler,
+REM tag <Tag>) into <AE_STATE_DIR>\<Tag>\, extracts it there, then mirrors
+REM that extracted folder into <BackupFolder>. <AE_STATE_DIR>\<Tag>\ is what
+REM the orchestrator's update check treats as "the currently installed
+REM version" from then on - same idea as the GBE Fork / GSE Tools caches
+REM above, just for the project's own release instead of a dependency's.
+REM
+REM Sets on return: errorlevel (0 = ok, 1 = fatal).
+REM ==========================================================================
+:FetchSelfUpdate
+set "FSU_TAG=%~2"
+set "FSU_STATE_DIR=%~3"
+set "FSU_BACKUP_DIR=%~4"
+
+if not defined FSU_TAG (
+    echo [ERROR] FetchSelfUpdate: no tag given
+    exit /b 1
+)
+
+set "FSU_TAG_DIR=%FSU_STATE_DIR%\%FSU_TAG%"
+if not exist "%FSU_TAG_DIR%" md "%FSU_TAG_DIR%" >nul 2>&1
+
+set "FSU_ZIP=%FSU_TAG_DIR%\source.zip"
+echo Downloading Achievement Enabler %FSU_TAG%...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $progressPreference='silentlyContinue'; $h=@{'User-Agent'='AchievementEnablerSetup'}; try { $rel = Invoke-RestMethod -Headers $h -Uri ('https://api.github.com/repos/Roschach96/Achievement-Enabler/releases/tags/{0}' -f $env:FSU_TAG); $asset = $rel.assets | Where-Object { $_.name -like '*.zip' } | Select-Object -First 1; $uri = if ($asset) { $asset.browser_download_url } else { $rel.zipball_url }; Invoke-WebRequest -Headers $h -Uri $uri -OutFile $env:FSU_ZIP } catch { Write-Host ('[ERROR] {0}' -f $_.Exception.Message); exit 1 }"
+if errorlevel 1 (
+    echo [ERROR] Failed to download release %FSU_TAG%
+    exit /b 1
+)
+
+echo Extracting...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { Expand-Archive -LiteralPath $env:FSU_ZIP -DestinationPath (Join-Path $env:FSU_TAG_DIR '_unzip') -Force } catch { Write-Host ('[ERROR] {0}' -f $_.Exception.Message); exit 1 }"
+if errorlevel 1 (
+    echo [ERROR] Extraction failed
+    exit /b 1
+)
+del "%FSU_ZIP%" >nul 2>&1
+
+REM Handle both possible zip shapes: a release asset zip usually has files
+REM directly at its root; GitHub's auto-generated source zipball wraps
+REM everything in a single "Achievement-Enabler-<tag>" folder instead.
+set "FSU_UNZIP=%FSU_TAG_DIR%\_unzip"
+set "FSU_WRAPPER="
+for /f "delims=" %%C in ('dir /B "%FSU_UNZIP%" 2^>nul ^| find /C /V ""') do set "FSU_ENTRY_COUNT=%%C"
+if "%FSU_ENTRY_COUNT%"=="1" (
+    for /d %%D in ("%FSU_UNZIP%\*") do set "FSU_WRAPPER=%%D"
+)
+if defined FSU_WRAPPER (
+    xcopy "%FSU_WRAPPER%" "%FSU_TAG_DIR%\" /E /I /Y /Q >nul
+) else (
+    xcopy "%FSU_UNZIP%" "%FSU_TAG_DIR%\" /E /I /Y /Q >nul
+)
+rmdir /S /Q "%FSU_UNZIP%" >nul 2>&1
+
+if not defined FSU_BACKUP_DIR (
+    echo [WARN] No Backup folder set - skipping copy step.
+    exit /b 0
+)
+if not exist "%FSU_BACKUP_DIR%" md "%FSU_BACKUP_DIR%" >nul 2>&1
+echo Copying to Backup folder: %FSU_BACKUP_DIR%
+xcopy "%FSU_TAG_DIR%" "%FSU_BACKUP_DIR%\" /E /I /Y /Q >nul
+if errorlevel 1 (
+    echo [ERROR] Copy to Backup folder failed
+    exit /b 1
+)
 exit /b 0
