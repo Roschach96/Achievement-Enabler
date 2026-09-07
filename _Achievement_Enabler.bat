@@ -56,8 +56,7 @@ echo ========================================
 echo    Achievement Enabler
 echo ========================================
 echo.
-echo This tool patches a game folder to run through a Goldberg-style Steam
-echo emulator (or Uplay R2, auto-detected) and enable achievements.
+echo This tool patches a game folder to enable achievements.
 echo.
 
 for /f "delims=" %%T in ('powershell -NoProfile -Command "(Get-Item -LiteralPath '%~f0').LastWriteTimeUtc.ToString('o')"') do set "SCRIPT_MTIME=%%T"
