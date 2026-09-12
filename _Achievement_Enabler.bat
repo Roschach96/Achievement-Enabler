@@ -167,8 +167,8 @@ set "UC_PY_ARG="
 
 if not exist "%SystemDrive%\steamcmd" mkdir "%SystemDrive%\steamcmd"
 
-if not exist "%SystemDrive%\steamcmd\AntivirusWarningDisplayed.txt" (
-    copy /b NUL "%SystemDrive%\steamcmd\AntivirusWarningDisplayed.txt" >nul
+if not exist "%AE_STATE_DIR%\AntivirusWarningDisplayed.txt" (
+    copy /b NUL "%AE_STATE_DIR%\AntivirusWarningDisplayed.txt" >nul
     echo.
     echo [WARNING] Please add %SystemDrive%\steamcmd and all folders that contain your games to your Antivirus exception list.
     echo [WARNING] This warning will not be displayed again.
@@ -279,8 +279,8 @@ REM ========================================
 REM One-time warning: GSE Tools 2026_02_16 ships a broken generate_emu_config.exe
 REM ========================================
 if "%GSE_TAG%"=="2026_02_16" (
-    if not exist "%SystemDrive%\steamcmd\GenerateEmuConfig_2026_02_16_Warning.txt" (
-        copy /b NUL "%SystemDrive%\steamcmd\GenerateEmuConfig_2026_02_16_Warning.txt" >nul
+    if not exist "%AE_STATE_DIR%\GenerateEmuConfig_2026_02_16_Warning.txt" (
+        copy /b NUL "%AE_STATE_DIR%\GenerateEmuConfig_2026_02_16_Warning.txt" >nul
         echo.
         echo [WARNING] The cached GSE Tools version ^(2026_02_16^) ships a generate_emu_config.exe
         echo [WARNING] that needs to be replaced before achievement data can be generated correctly.
