@@ -2,9 +2,10 @@
 #
 # Emulator-agnostic adapter picker. Scans every adapters\*\adapter.json and
 # figures out which one applies to THIS game folder by searching for
-# adapter-specific loader DLLs. Adding a new emulator later never requires
-# touching this file - just drop a new adapters\<id>\adapter.json with its
-# own detect.loader_dll_names.
+# adapter-specific loader DLLs, or by checking for a fixed marker file at a
+# known relative path. Adding a new emulator later never requires touching
+# this file - just drop a new adapters\<id>\adapter.json with its own
+# detect.loader_dll_names and/or detect.marker_files.
 #
 # Detection rule per adapter (from adapter.json's "detect" object):
 #   loader_dll_names: []          + is_default: true   -> fallback adapter,
@@ -16,11 +17,31 @@
 #                                                          names is found
 #                                                          anywhere in the
 #                                                          game folder
+#   marker_files: [...]           + is_default: false   -> selected
+#                                                          automatically when
+#                                                          ANY of those exact
+#                                                          relative paths
+#                                                          (from the game
+#                                                          root) exists - NOT
+#                                                          a recursive search,
+#                                                          just Test-Path at
+#                                                          that fixed
+#                                                          location. Used for
+#                                                          ea_origin_emulator's
+#                                                          ".\__Installer\
+#                                                          installerdata.xml"
+#                                                          check, since EA/
+#                                                          Origin games don't
+#                                                          have a loader DLL
+#                                                          to search for.
+# An adapter can supply either or both of loader_dll_names / marker_files;
+# a hit on either one counts as a match for that adapter.
 #
 # The DLL search always excludes the script's own folders (core\, adapters\) -
 # adapter template assets (e.g. adapters\ubisoft_uplay_r2\GoldbergUplayR2-*) live
 # inside adapters\, so excluding that root wholesale also keeps the template
-# DLLs from causing a false-positive match on their own account.
+# DLLs from causing a false-positive match on their own account. marker_files
+# checks a single fixed path directly, so no exclusion logic applies to them.
 #
 # Reads:  -AdaptersRoot, -CoreRoot, -GameFolder
 # Writes: _ae_adapter.cmd (set AE_ADAPTER_ID / AE_ADAPTER_NAME / AE_ADAPTER_DIR / AE_ASSETS_DIR)
@@ -68,6 +89,8 @@ foreach ($dir in $adapterDirs) {
     }
     $loaderNames = @()
     if ($meta.detect -and $meta.detect.loader_dll_names) { $loaderNames = @($meta.detect.loader_dll_names) }
+    $markerFiles = @()
+    if ($meta.detect -and $meta.detect.marker_files) { $markerFiles = @($meta.detect.marker_files) }
     $isDefault = $meta.detect -and $meta.detect.is_default -eq $true
 
     $adapters += [PSCustomObject]@{
@@ -75,6 +98,7 @@ foreach ($dir in $adapterDirs) {
         Name          = $meta.name
         Priority      = if ($meta.priority) { [int]$meta.priority } else { 999 }
         LoaderNames   = $loaderNames
+        MarkerFiles   = $markerFiles
         IsDefault     = $isDefault
         AssetsGlob    = $meta.assets_folder_glob
         Dir           = $dir.FullName
@@ -89,6 +113,8 @@ if ($adapters.Count -eq 0) {
 # ── Build the exclusion list: just the script's own folders. Adapter assets
 # (e.g. GoldbergUplayR2-*) now live inside adapters\<id>\, which is already
 # covered by excluding $AdaptersRoot wholesale - no per-adapter exclusion needed.
+# (marker_files checks don't use this - they Test-Path a single known
+# location under $GameFolder, which is never inside core\ or adapters\.)
 $excludeRoots = @(
     (Resolve-Path -LiteralPath $CoreRoot -ErrorAction SilentlyContinue).Path,
     (Resolve-Path -LiteralPath $AdaptersRoot -ErrorAction SilentlyContinue).Path
@@ -104,27 +130,36 @@ function Test-Excluded([string]$fullPath) {
     return $false
 }
 
-# ── Search the game folder for each adapter's loader DLL names ────────────
+# ── Search the game folder for each adapter's loader DLL names or marker files ──
 $matches = @()
 foreach ($a in $adapters) {
-    if ($a.LoaderNames.Count -eq 0) { continue }
+    if ($a.LoaderNames.Count -eq 0 -and $a.MarkerFiles.Count -eq 0) { continue }
 
-    $hit = $null
+    $hitDescription = $null
+
     foreach ($dllName in $a.LoaderNames) {
         $found = Get-ChildItem -LiteralPath $GameFolder -Recurse -File -Filter $dllName -Force -ErrorAction SilentlyContinue |
             Where-Object { -not (Test-Excluded $_.FullName) } |
             Select-Object -First 1
-        if ($found) { $hit = $found; break }
+        if ($found) { $hitDescription = $found.FullName; break }
     }
-    if ($hit) {
-        Write-Host "[INFO] Found $($hit.Name) at: $($hit.FullName)"
+
+    if (-not $hitDescription) {
+        foreach ($relPath in $a.MarkerFiles) {
+            $candidate = Join-Path $GameFolder $relPath
+            if (Test-Path -LiteralPath $candidate) { $hitDescription = $candidate; break }
+        }
+    }
+
+    if ($hitDescription) {
+        Write-Host "[INFO] Found $hitDescription for adapter '$($a.Name)'."
         $matches += [PSCustomObject]@{ Adapter = $a; AssetsDir = (Resolve-AssetsDir $a.Dir $a.AssetsGlob) }
     }
 }
 
 if ($matches.Count -eq 1) {
     $m = $matches[0]
-    Write-Host "[INFO] Auto-detected adapter '$($m.Adapter.Name)' from a loader DLL found in the game folder."
+    Write-Host "[INFO] Auto-detected adapter '$($m.Adapter.Name)'."
     Write-Selection $m.Adapter.Id $m.Adapter.Name $m.Adapter.Dir $m.AssetsDir
     exit 0
 }
@@ -136,13 +171,13 @@ if ($matches.Count -eq 0) {
     $defaults = @($adapters | Where-Object { $_.IsDefault })
     if ($defaults.Count -eq 1) {
         $d = $defaults[0]
-        Write-Host "[INFO] No emulator-specific loader DLL found in the game folder - using default adapter '$($d.Name)'."
+        Write-Host "[INFO] No emulator-specific loader DLL or marker file found in the game folder - using default adapter '$($d.Name)'."
         Write-Selection $d.Id $d.Name $d.Dir (Resolve-AssetsDir $d.Dir $d.AssetsGlob)
         exit 0
     }
 }
 
-# ── Ambiguous (0 or >1 default candidates, or multiple DLL matches) - ask ──
+# ── Ambiguous (0 or >1 default candidates, or multiple matches) - ask ──────
 Write-Host ""
 Write-Host "Could not unambiguously auto-detect which emulator adapter applies. Select one:"
 Write-Host ""

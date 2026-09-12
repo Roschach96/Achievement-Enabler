@@ -1,0 +1,12 @@
+{
+  "id": "ea_origin_emulator",
+  "name": "EA / Origin (anadius Denuvo/Origin Emulator)",
+  "priority": 5,
+  "detect": {
+    "loader_dll_names": [],
+    "marker_files": [".\\__Installer\\installerdata.xml"],
+    "is_default": false
+  },
+  "assets_folder_glob": null,
+  "notes": "Selected when .\\__Installer\\installerdata.xml exists in the game root - the standard marker every EA/Origin installer leaves behind, unlike Goldberg/Uplay which are detected by a loader DLL. Achievement data is resolved independently (AE_STEAM_SCHEMA=0): origin_helper.py + get_token.py (already a standalone, tested tool - see adapters\\ea_origin_emulator\\origin_helper.py) parse installerdata.xml, cross-reference the game's own cross-listed Steam release on isthereanydeal.com/SteamDB for achievement names, and write anadius.cfg plus a small _origin_helper_meta.txt (steam_appid/content_id/display_name) directly into the game root. The Jokerverse export (modify_joker_json.ps1) reads that metadata file rather than re-deriving the Steam appid itself, since Jokerverse tracks EA games under platform:\"steam\" using their cross-listed Steam appid, not EA's own ContentId (confirmed against a real anadius-generated Need for Speed Unbound entry)."
+}

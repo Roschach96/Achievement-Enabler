@@ -204,6 +204,7 @@ REM ========================================
 set "AE_STEAM_SCHEMA=1"
 if "%AE_ADAPTER_ID%"=="gog_universelan" set "AE_STEAM_SCHEMA=0"
 if "%AE_ADAPTER_ID%"=="epic_nemirtingas_epic_emulator" set "AE_STEAM_SCHEMA=0"
+if "%AE_ADAPTER_ID%"=="ea_origin_emulator" set "AE_STEAM_SCHEMA=0"
 
 REM ========================================
 REM STEP 1b: Automatic crack-state pre-flight checks (no user prompt)

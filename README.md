@@ -33,55 +33,24 @@ core/
     update_top_owners.py          <- Tries to create a list of profiles with newest games so achievement info can be collected
     check_update.py               <- Checks GitHub page's releases for updates
 adapters/
+ea_origin_emulator                    <- Origin Emulator (by anadius)
+    (Project files)
+    Origin Emulator                     <- Not part of the GitHub project, check release notes
+    Origin Unwrapper                    <- Not part of the GitHub project, check release notes
   epic_nemirtingas_epic_emulator  <- NemirtingasEpicEmulator (by Nemirtingas)
-    adapter.json
-    deploy_nemir_epic_emu.ps1
-    download_nemir_epic_emu.ps1
-    epic_namespace_lookup.ps1
-    find_paths.ps1
-    GameSample.json
-    generate_achievement_percentages.ps1
-    jokerverse_fetch_epic_achievements.bat
-    make_shortcut.ps1
-    modify_joker_json.ps1
-    NemirtingasEpicEmu.json
-    write_config.ps1
+    (Project files)
   gog_universelan/                <- GOG UniverseLAN (GOG Galaxy wrapper by grasmanek94)
-    adapter.json
-    find_paths.ps1
-    write_config.ps1
-    find_galaxy_dll.ps1
-    download_universelan.ps1
-    deploy_universelan.ps1
-    modify_joker_json.ps1
-    generate_achievement_percentages.ps1
-    make_shortcut.ps1
-    GameSample.json
+    (Project files)
   ubisoft_uplay_r1/               <- Uplay R1 (older Ubisoft emulator version by demde), same structure as Uplay R2
-    UplayR1-*/                    <- Not part of the GitHub project, check release notes.
-    ...same file list as ubisoft_uplay_r2, adapted for r1 naming...
+    (Project files)
+    UplayR1-*/                    <- Not part of the GitHub project, check release notes
   ubisoft_uplay_r2/               <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
+    (Project files)
     GoldbergUplayR2-*/            <- Not part of the GitHub project, check release notes.
-    adapter.json
-    find_paths.ps1
-    write_config.ps1
-    patch_ini.ps1
-    generate_achievements_schema_v3.ps1
-    modify_joker_json.ps1
-    generate_achievement_percentages.ps1
-    make_shortcut.ps1
-    GameSample.json
   steam_coldclient/               <- Steam ColdClient (Goldberg Steam emulator fork by Detanup01)
-    adapter.json
-    find_paths.ps1
-    write_config.ps1
-    modify_joker_json.ps1
-    generate_achievement_percentages.ps1
-    make_shortcut.ps1
-    GameSample.json
+    (Project files)
     steamstub_x32.dll             <- Not part of the GitHub project, check release notes
     steamstub_x64.dll             <- Not part of the GitHub project, check release notes
-    UserData_symbolic_link_for_D_tokens.ps1
 ```
 
 ## How it works
@@ -239,4 +208,6 @@ Thank you grasmanek94 for [UniverseLAN](https://github.com/grasmanek94/UniverseL
 
 Thank you JokerVerse for [Epic achievement fetch script](https://pserban93.github.io/Achievements-Docs/platforms.html#nemirtingas-epic-emu)
 
-Thank you for Nemirtingas for [NemirtingasEpicEmulator](https://gitlab.com/Nemirtingas/epicemulatorregistry)
+Thank you Nemirtingas for [NemirtingasEpicEmulator](https://gitlab.com/Nemirtingas/epicemulatorregistry)
+
+Thank you anadius for [Origin Emulator](https://cs.rin.ru/forum/viewtopic.php?p=2432863#p2432863) and [Origin Unwrapper](https://cs.rin.ru/forum/viewtopic.php?p=2660134#p2660134)
