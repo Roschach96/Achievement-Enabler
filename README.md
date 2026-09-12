@@ -6,6 +6,7 @@ This script package aims to make games work with achievements for multiple platf
 These need additional adapter files (check releases for more info):
 - Steam (gbe_fork)
 - Ubisoft (Uplay R1; Uplay R2)
+- EA (Origin Emulator)
 
 These don't need additional adapter files:
 - Epic (NemirtingasEpicEmulator) [Tested with Alan Wake 2 and worked but that needed a specific EOSSDK-Win64-Shipping.dll to launch]
