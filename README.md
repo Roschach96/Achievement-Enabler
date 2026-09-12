@@ -15,7 +15,7 @@ These don't need additional adapter files:
 ## Usage
 
 1. Extract the zipped release to a folder
-2. (GOG and Epic don't need this step) Create dummy_account.txt and fill in your "throwaway Steam account" details
+2. (GOG, EA and Epic don't need this step) Create dummy_account.txt and fill in your "throwaway Steam account" details
 4. Keep a backup of these files somewhere because the script will delete all script related files from the game's folder after it finishes
 5. Copy all script files to the game's main folder
 6. Run _Achievement_Enabler.bat and follow the steps
@@ -23,36 +23,100 @@ These don't need additional adapter files:
 ## Layout
 
 ```
-_Achievement_Enabler.bat          <- the only script you run from the game's folder
-dummy_account.txt.example         <- rename it to dummy_account.txt and fill in your "throwaway account" details
+_Achievement_Enabler.bat               <- the only script you run from the game's folder
+dummy_account.txt.example              <- rename it to dummy_account.txt and fill in your "throwaway Steam account" details
 core/
-  common/
-    select_adapter.ps1            <- scans adapters/*/adapter.json, picks one
-    download_helpers.bat          <- shared GitHub asset / GBE Fork / GSE Tools fetch
-    shared_find_appid.ps1         <- Steam Store AppID lookup by folder name
-    shared_parse_launch_args.ps1  <- Checks if the game needs any launch arguments to make achievemens work
-    update_top_owners.py          <- Tries to create a list of profiles with newest games so achievement info can be collected
-    check_update.py               <- Checks GitHub page's releases for updates
+ └─ common/
+    ├─ select_adapter.ps1              <- scans adapters/*/adapter.json, picks one
+    ├─ download_helpers.bat            <- shared GitHub asset / GBE Fork / GSE Tools fetch
+    ├─ shared_find_appid.ps1           <- Steam Store AppID lookup by folder name
+    ├─ shared_parse_launch_args.ps1    <- Checks if the game needs any launch arguments to make achievemens work
+    ├─ update_top_owners.py            <- Tries to create a list of profiles with newest games so achievement info can be collected
+    └─ check_update.py                 <- Checks GitHub page's releases for updates
 adapters/
-ea_origin_emulator                    <- Origin Emulator (by anadius)
-    (Project files)
-    Origin Emulator                     <- Not part of the GitHub project, check release notes
-    Origin Unwrapper                    <- Not part of the GitHub project, check release notes
-  epic_nemirtingas_epic_emulator  <- NemirtingasEpicEmulator (by Nemirtingas)
-    (Project files)
-  gog_universelan/                <- GOG UniverseLAN (GOG Galaxy wrapper by grasmanek94)
-    (Project files)
-  ubisoft_uplay_r1/               <- Uplay R1 (older Ubisoft emulator version by demde), same structure as Uplay R2
-    (Project files)
-    UplayR1-*/                    <- Not part of the GitHub project, check release notes
-  ubisoft_uplay_r2/               <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
-    (Project files)
-    GoldbergUplayR2-*/            <- Not part of the GitHub project, check release notes.
-  steam_coldclient/               <- Steam ColdClient (Goldberg Steam emulator fork by Detanup01)
-    (Project files)
-    steamstub_x32.dll             <- Not part of the GitHub project, check release notes
-    steamstub_x64.dll             <- Not part of the GitHub project, check release notes
+ ├─ ea_origin_emulator              <- Origin Emulator (by anadius)
+ │  ├─ (Project files)
+ │  ├─ Origin Emulator              <- Not part of the GitHub project, check release notes
+ │  └─ Origin Unwrapper             <- Not part of the GitHub project, check release notes
+ ├─ epic_nemirtingas_epic_emulator  <- NemirtingasEpicEmulator (by Nemirtingas)
+ │  └─ (Project files)
+ ├─ gog_universelan/                <- GOG UniverseLAN (GOG Galaxy wrapper by grasmanek94)
+ │  └─ (Project files)
+ ├─ ubisoft_uplay_r1/               <- Uplay R1 (older Ubisoft emulator version by demde), same structure as Uplay R2
+ │  ├─ (Project files)
+ │  └─ UplayR1-*/                   <- Not part of the GitHub project, check release notes
+ ├─ ubisoft_uplay_r2/               <- Uplay R2 (Goldberg R2 Ubisoft emulator version by demde)
+ │  ├─ (Project files)
+ │  └─ GoldbergUplayR2-*/           <- Not part of the GitHub project, check release notes.
+ └─ steam_coldclient/               <- Steam ColdClient (Goldberg Steam emulator fork by Detanup01)
+    ├─ (Project files)
+    ├─ steamstub_x32.dll            <- Not part of the GitHub project, check release notes
+    └─ steamstub_x64.dll            <- Not part of the GitHub project, check release notes
 ```
+
+┌─ adapters\
+│  ├─ ea_origin_emulator\
+│  │  ├─ (Project Files)
+│  ├─ epic_nemirtingas_epic_emulator\
+│  │  ├─ adapter.json
+│  │  ├─ deploy_nemir_epic_emu.ps1
+│  │  ├─ download_nemir_epic_emu.ps1
+│  │  ├─ epic_namespace_lookup.ps1
+│  │  ├─ find_paths.ps1
+│  │  ├─ generate_achievement_percentages.ps1
+│  │  ├─ jokerverse_fetch_epic_achievements.bat
+│  │  ├─ make_shortcut.ps1
+│  │  ├─ modify_joker_json.ps1
+│  │  ├─ NemirtingasEpicEmu.json
+│  │  └─ write_config.ps1
+│  ├─ gog_universelan\
+│  │  ├─ adapter.json
+│  │  ├─ deploy_universelan.ps1
+│  │  ├─ download_universelan.ps1
+│  │  ├─ find_galaxy_dll.ps1
+│  │  ├─ find_paths.ps1
+│  │  ├─ GameSample.json
+│  │  ├─ generate_achievement_percentages.ps1
+│  │  ├─ make_shortcut.ps1
+│  │  ├─ modify_joker_json.ps1
+│  │  └─ write_config.ps1
+│  ├─ steam_coldclient\
+│  │  ├─ adapter.json
+│  │  ├─ find_paths.ps1
+│  │  ├─ GameSample.json
+│  │  ├─ generate_achievement_percentages.ps1
+│  │  ├─ make_shortcut.ps1
+│  │  ├─ modify_joker_json.ps1
+│  │  ├─ UserData_symbolic_link_for_D_tokens.ps1
+│  │  └─ write_config.ps1
+│  ├─ ubisoft_uplay_r1\
+│  │  ├─ adapter.json
+│  │  ├─ find_paths.ps1
+│  │  ├─ GameSample.json
+│  │  ├─ generate_achievements_schema_v3.ps1
+│  │  ├─ generate_achievement_percentages.ps1
+│  │  ├─ make_shortcut.ps1
+│  │  ├─ modify_joker_json.ps1
+│  │  ├─ patch_ini.ps1
+│  │  └─ write_config.ps1
+│  └─ ubisoft_uplay_r2\
+│     ├─ adapter.json
+│     ├─ find_paths.ps1
+│     ├─ GameSample.json
+│     ├─ generate_achievements_schema_v3.ps1
+│     ├─ generate_achievement_percentages.ps1
+│     ├─ make_shortcut.ps1
+│     ├─ modify_joker_json.ps1
+│     ├─ patch_ini.ps1
+│     └─ write_config.ps1
+└─ core\
+   └─ common\
+      ├─ check_update.py
+      ├─ download_helpers.bat
+      ├─ select_adapter.ps1
+      ├─ shared_find_appid.ps1
+      ├─ shared_parse_launch_args.ps1
+      └─ update_top_owners.py
 
 ## How it works
 
