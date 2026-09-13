@@ -158,12 +158,52 @@ if not defined UC_PY (
     where python >nul 2>&1 && set "UC_PY=python"
 )
 set "UC_STARTED=0"
-if defined UC_PY (
-    start "" /B "%UC_PY%" %UC_PY_ARG% "%COMMON_DIR%\check_update.py" --current-tag "%AE_CURRENT_TAG%" --current-mtime "%SCRIPT_MTIME%" --result-file "%UPDATE_RESULT_CMD%" --changelog-file "%UPDATE_CHANGELOG_FILE%" --skip-file "%UPDATE_SKIP_FILE%" >"%UPDATE_LOG%" 2>&1
-    set "UC_STARTED=1"
+
+REM ========================================
+REM Throttle: only run the update check if it has not run in the last
+REM %UPDATE_CHECK_INTERVAL_HOURS% hours. The stamp file's last-write
+REM time is the record of the previous check.
+REM ========================================
+set "UPDATE_CHECK_INTERVAL_HOURS=1"
+set "UPDATE_STAMP_FILE=%AE_STATE_DIR%\last_update_check.txt"
+set "UC_DUE=1"
+if exist "%UPDATE_STAMP_FILE%" (
+    for /f "delims=" %%A in ('powershell -NoProfile -Command "if([DateTime]::UtcNow -lt (Get-Item -LiteralPath '%UPDATE_STAMP_FILE%').LastWriteTimeUtc.AddHours(%UPDATE_CHECK_INTERVAL_HOURS%)){'0'}else{'1'}"') do set "UC_DUE=%%A"
 )
+
+if defined UC_PY if "%UC_DUE%"=="1" (
+    echo.
+    echo [INFO] Checking for Achievement Enabler updates...
+    "%UC_PY%" %UC_PY_ARG% "%COMMON_DIR%\check_update.py" --current-tag "%AE_CURRENT_TAG%" --current-mtime "%SCRIPT_MTIME%" --result-file "%UPDATE_RESULT_CMD%" --changelog-file "%UPDATE_CHANGELOG_FILE%" --skip-file "%UPDATE_SKIP_FILE%" >"%UPDATE_LOG%" 2>&1
+    set "UC_STARTED=1"
+    >"%UPDATE_STAMP_FILE%" echo %DATE% %TIME%
+)
+if defined UC_PY if not "%UC_DUE%"=="1" echo [INFO] Skipping update check ^(last checked within %UPDATE_CHECK_INTERVAL_HOURS%h^).
 set "UC_PY="
 set "UC_PY_ARG="
+
+REM ========================================
+REM Collect the update-check result.
+REM ========================================
+if "%UC_STARTED%"=="1" (
+    if exist "%UPDATE_RESULT_CMD%" (
+        call "%UPDATE_RESULT_CMD%"
+        del "%UPDATE_RESULT_CMD%" >nul 2>&1
+    )
+)
+if defined UPDATE_AVAILABLE (
+    echo.
+    echo [UPDATE] !UPDATE_COUNT! release^(s^) newer than this script were found:
+    if defined CHANGELOG_FILE if exist "!CHANGELOG_FILE!" (
+        echo.
+        type "!CHANGELOG_FILE!"
+        echo -----------------------------
+    )
+    choice /C YNS /N /M "Download and update now? (Y)es, (N)o, or (S)kip these versions: "
+    set "AE_UPDATE_CHOICE=!errorlevel!"
+    if "!AE_UPDATE_CHOICE!"=="3" call :SkipUpdateVersions
+    if "!AE_UPDATE_CHOICE!"=="1" call :ApplyUpdate
+)
 
 if not exist "%SystemDrive%\steamcmd" mkdir "%SystemDrive%\steamcmd"
 
@@ -177,7 +217,7 @@ if not exist "%AE_STATE_DIR%\AntivirusWarningDisplayed.txt" (
     pause
     exit /b 1
 )
-
+    echo.
 REM ========================================
 REM STEP 1: Pick an adapter (Goldberg / Uplay R2 / whatever else is installed)
 REM ========================================
@@ -776,7 +816,7 @@ if "%VOICES38%"=="1" (
 )
 
 REM ========================================
-REM STEP 14: Collect background update-check result
+REM STEP 14: Collect background SteamLadder top-owners result
 REM ========================================
 if not defined TOP_OWNERS_UPDATED if "%TOP_OWNERS_STARTED%"=="1" if exist "%TOP_OWNERS_RESULT_CMD%" (
     call "%TOP_OWNERS_RESULT_CMD%"
@@ -790,25 +830,6 @@ if not defined TOP_OWNERS_UPDATED if "%TOP_OWNERS_STARTED%"=="1" if exist "%TOP_
         )
         echo [INFO] SteamLadder top-owners cache refreshed.
     )
-)
-if "%UC_STARTED%"=="1" (
-    if exist "%UPDATE_RESULT_CMD%" (
-        call "%UPDATE_RESULT_CMD%"
-        del "%UPDATE_RESULT_CMD%" >nul 2>&1
-    )
-)
-if defined UPDATE_AVAILABLE (
-    echo.
-    echo [UPDATE] !UPDATE_COUNT! release^(s^) newer than this script were found:
-    if defined CHANGELOG_FILE if exist "!CHANGELOG_FILE!" (
-        echo.
-        type "!CHANGELOG_FILE!"
-        echo -----------------------------
-    )
-    choice /C YNS /N /M "Download and update now? (Y)es, (N)o, or (S)kip these versions: "
-    set "AE_UPDATE_CHOICE=!errorlevel!"
-    if "!AE_UPDATE_CHOICE!"=="3" call :SkipUpdateVersions
-    if "!AE_UPDATE_CHOICE!"=="1" call :ApplyUpdate
 )
 goto :after_update_check
 
