@@ -1,37 +1,30 @@
 # adapters\gog_universelan\modify_joker_json.ps1
-# Reads GameSample.json (GOG variant - platform "gog", config/save paths
-# under UniverseLAN's own layout), fills in real values, writes the final
-# per-game config to the Jokerverse Achievements folder.
+# Jokerverse creates the game's config .json itself, on its own detection
+# cycle - so this adapter no longer writes it. Mirroring the Epic/EA
+# adapters, this:
+#   1. Creates UniverseLAN's own save-data folder (Local\UniverseLAN\<appid>).
+#   2. Watches %AppData%\Achievements\configs\ for the .json Jokerverse
+#      creates and patches "executable"/"process_name" into it.
 #
-# The GOG App ID is looked up here from the game's own goggame-<id>.info
-# file (same approach as deploy_universelan.ps1's Get-GogAppId) rather than
-# being passed in - GOG never appears in a SteamCMD manifest, so there is no
-# earlier orchestrator step that already knows it.
+# If no new/changed config appears within the 10s window, this logs a
+# warning and exits successfully - Jokerverse may simply not be running.
 #
-#   AE_SOURCE_JSON  - path to the GameSample.json template
-#   AE_DEST_JSON    - destination path for the output JSON
-#   AE_GAME_NAME    - display / folder name of the game
-#   AE_GAME_FOLDER  - game root (searched for goggame-<id>.info)
+# The GOG App ID is looked up from the game's own goggame-<id>.info file
+# (GOG never appears in a SteamCMD manifest), same as deploy_universelan.ps1.
+#
 #   AE_APP_DATA     - real %AppData% path
+#   AE_GAME_FOLDER  - game root (searched for goggame-<id>.info)
 #   AE_EXECUTABLE   - full path to the selected game exe
-#   AE_ARGUMENTS    - launch args (may be empty)
 #   AE_PROCESS_NAME - filename of the game exe (e.g. GameName.exe)
 
-$sourceJson  = $env:AE_SOURCE_JSON
-$destJson    = $env:AE_DEST_JSON
-$gameName    = $env:AE_GAME_NAME
-$gameFolder  = $env:AE_GAME_FOLDER
 $appDataPath = $env:AE_APP_DATA
+$gameFolder  = $env:AE_GAME_FOLDER
 $executable  = $env:AE_EXECUTABLE
-$arguments   = if ($env:AE_ARGUMENTS) { $env:AE_ARGUMENTS } else { "" }
 $processName = $env:AE_PROCESS_NAME
 
 $missing = @()
-if (-not $sourceJson)  { $missing += "AE_SOURCE_JSON" }
-if (-not $destJson)    { $missing += "AE_DEST_JSON" }
-if (-not $gameName)    { $missing += "AE_GAME_NAME" }
-if (-not $gameFolder)  { $missing += "AE_GAME_FOLDER" }
 if (-not $appDataPath) { $missing += "AE_APP_DATA" }
+if (-not $gameFolder)  { $missing += "AE_GAME_FOLDER" }
 if (-not $executable)  { $missing += "AE_EXECUTABLE" }
 if (-not $processName) { $missing += "AE_PROCESS_NAME" }
 
@@ -40,15 +33,9 @@ if ($missing.Count -gt 0) {
     exit 1
 }
 
-if (-not (Test-Path -LiteralPath $sourceJson)) {
-    Write-Host "[ERROR] Source JSON not found: $sourceJson"
-    exit 1
-}
-
 function Get-GogAppId {
     # Finds the game's GOG App ID from its "goggame-<id>.info" file - checks
-    # the game folder itself first, then falls back to a recursive search
-    # in case it's nested. Returns $null if no such file is found.
+    # the game folder itself first, then falls back to a recursive search.
     param([string]$GameFolder)
     $infoFile = Get-ChildItem -LiteralPath $GameFolder -Filter 'goggame-*.info' -File -ErrorAction SilentlyContinue |
         Select-Object -First 1
@@ -69,35 +56,75 @@ if (-not $appId) {
 }
 Write-Host "[INFO] GOG App ID detected: $appId"
 
+$savePath = Join-Path $appDataPath "Local\UniverseLAN\$appId"
+
+Write-Host "[INFO] Jokerverse config generation is skipped for this adapter - creating empty save folder instead."
+
 try {
-    $json = Get-Content -LiteralPath $sourceJson -Raw -Encoding UTF8 | ConvertFrom-Json
+    if (-not (Test-Path -LiteralPath $savePath)) {
+        New-Item -ItemType Directory -Path $savePath -Force | Out-Null
+        Write-Host "[INFO] Created: $savePath"
+    } else {
+        Write-Host "[INFO] Already exists: $savePath"
+    }
 } catch {
-    Write-Host "[ERROR] Failed to parse JSON template: $_"
+    Write-Host "[ERROR] Failed to create save folder: $_"
     exit 1
 }
 
-$configPath = Join-Path $appDataPath "Achievements\configs\schema\gog\$appId"
-$savePath   = Join-Path $appDataPath "Local\UniverseLAN\$appId"
-
-$json.name         = "$gameName (GOG)"
-$json.appid        = $appId
-$json.platform     = "gog"
-$json.config_path  = $configPath
-$json.save_path    = $savePath
-$json.executable   = $executable
-$json.arguments    = $arguments
-$json.process_name = $processName
-
-$destDir = Split-Path -Parent $destJson
-if (-not (Test-Path -LiteralPath $destDir)) {
-    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+# ---- Watch for a new/changed Jokerverse config file --------------------------
+$configsDir = Join-Path $appDataPath "Achievements\configs"
+if (-not (Test-Path -LiteralPath $configsDir)) {
+    Write-Host "[INFO] $configsDir does not exist - Jokerverse is probably not installed. Skipping executable/process_name patch."
+    exit 0
 }
 
+Write-Host "[INFO] Watching $configsDir for a new Jokerverse config (up to 10s)..."
+
+# Baseline: filename -> LastWriteTimeUtc for everything already there before
+# we start watching, so we can tell "new" and "just-modified" apart from
+# files that were already sitting there untouched.
+$baseline = @{}
+Get-ChildItem -LiteralPath $configsDir -Filter '*.json' -File -ErrorAction SilentlyContinue | ForEach-Object {
+    $baseline[$_.Name] = $_.LastWriteTimeUtc
+}
+
+$targetFile = $null
+$elapsedMs  = 0
+$pollMs     = 100
+$timeoutMs  = 10000
+
+while ($elapsedMs -lt $timeoutMs -and -not $targetFile) {
+    Start-Sleep -Milliseconds $pollMs
+    $elapsedMs += $pollMs
+
+    $current = Get-ChildItem -LiteralPath $configsDir -Filter '*.json' -File -ErrorAction SilentlyContinue
+    foreach ($file in $current) {
+        $wasKnown = $baseline.ContainsKey($file.Name)
+        $isNew     = -not $wasKnown
+        $isChanged = $wasKnown -and ($file.LastWriteTimeUtc -gt $baseline[$file.Name])
+        if ($isNew -or $isChanged) {
+            $targetFile = $file
+            break
+        }
+    }
+}
+
+if (-not $targetFile) {
+    Write-Host "[WARN] No new or changed Jokerverse config appeared in $configsDir within 10s - skipping executable/process_name patch."
+    exit 0
+}
+
+Write-Host "[INFO] Detected Jokerverse config: $($targetFile.FullName)"
+
 try {
+    $json = Get-Content -LiteralPath $targetFile.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+    $json.executable   = $executable
+    $json.process_name = $processName
     $output = $json | ConvertTo-Json -Depth 10
-    [System.IO.File]::WriteAllText($destJson, $output, [System.Text.UTF8Encoding]::new($false))
-    Write-Host "[INFO] Game config written to: $destJson"
+    [System.IO.File]::WriteAllText($targetFile.FullName, $output, [System.Text.UTF8Encoding]::new($false))
+    Write-Host "[INFO] Patched executable/process_name in: $($targetFile.FullName)"
 } catch {
-    Write-Host "[ERROR] Failed to write output JSON: $_"
+    Write-Host "[ERROR] Failed to patch detected config: $_"
     exit 1
 }
