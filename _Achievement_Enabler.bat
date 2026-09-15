@@ -789,7 +789,6 @@ if "%AE_ADAPTER_ID%"=="gog_universelan" (
 ) else (
 set "targetJsonPath=%targetDir%\%gameName%.json"
 )
-if exist "%targetJsonPath%" del /Q "%targetJsonPath%"
 
 set "AE_SOURCE_JSON=%AE_ADAPTER_DIR%\GameSample.json"
 set "AE_DEST_JSON=%targetJsonPath%"
