@@ -48,6 +48,19 @@ set "ADAPTERS_ROOT=%TOOLS_DIR%adapters"
 
 goto :main
 
+REM --- Run generate_emu_config with the chosen flag. The -aw build writes its
+REM     "output" folder relative to the CURRENT directory, so run it from inside
+REM     generate_emu_config to keep output out of the game root. -acw is unchanged.
+:RunGec
+if "%GEC_FLAG%"=="-aw" (
+    pushd generate_emu_config
+    call generate_emu_config %GEC_FLAG% %gameAppID%
+    popd
+) else (
+    call generate_emu_config\generate_emu_config %GEC_FLAG% %gameAppID%
+)
+goto :eof
+
 REM ============================================================================
 :main
 REM ============================================================================
@@ -612,14 +625,14 @@ set "GEC_FLAG=-aw"
 for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash -LiteralPath '%GEC_EXE%' -Algorithm SHA1).Hash"`) do set "GEC_SHA1=%%H"
 if /I "%GEC_SHA1%"=="6DBBF28606E0D904C65C19378C0B2203597C21CF" set "GEC_FLAG=-acw"
 
-call generate_emu_config\generate_emu_config %GEC_FLAG% %gameAppID%
-
-REM Output location differs by flag: -acw -> generate_emu_config\_OUTPUT, -aw -> output (game root)
+REM Output location differs by flag: -acw -> generate_emu_config\_OUTPUT, -aw -> generate_emu_config\output
 if "%GEC_FLAG%"=="-aw" (
-    set "GEC_OUT_DIR=output\%gameAppID%"
+    set "GEC_OUT_DIR=generate_emu_config\output\%gameAppID%"
 ) else (
     set "GEC_OUT_DIR=generate_emu_config\_OUTPUT\%gameAppID%"
 )
+
+call :RunGec
 set "GEC_STEAM_SETTINGS=!GEC_OUT_DIR!\steam_settings"
 
 set "AE_ACHIEVEMENTS_MISSING=0"
@@ -652,7 +665,7 @@ if "%AE_ACHIEVEMENTS_MISSING%"=="1" (
 if defined TOP_OWNERS_UPDATED (
     if "%AE_ACHIEVEMENTS_MISSING%"=="1" (
         echo [INFO] SteamLadder list is ready; retrying achievement generation with the fallback list.
-        call generate_emu_config\generate_emu_config %GEC_FLAG% %gameAppID%
+        call :RunGec
     )
 ) else (
     if "%AE_ACHIEVEMENTS_MISSING%"=="1" echo [WARN] SteamLadder fallback list was not ready; continuing without it.
@@ -789,7 +802,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%AE_ADAPTER_DIR%\modify_jok
 if errorlevel 1 (
     echo [WARN] !AE_ADAPTER_NAME! modify_joker_json.ps1 reported an error - check output above.
 )
-echo [INFO] Config written to: %targetJsonPath%
 echo.
 
 if "%AE_STEAM_SCHEMA%"=="0" goto :skip_steam_joker
