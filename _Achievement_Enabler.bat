@@ -284,7 +284,7 @@ if "%AE_ADAPTER_ID%"=="steam_coldclient" (
     for /f "delims=" %%F in ('dir /s /b voices38.dll 2^>nul ^| findstr /I /V /C:"\adapters\" /C:"\core\"') do set "AE_VOICES38_FOUND=1"
     if defined AE_VOICES38_FOUND (
         echo [ERROR] voices38.dll found in the game folder.
-        echo [ERROR] Please reinstall this game, then rerun this script.
+        echo [ERROR] Please reinstall the game without applying the voices38 files, then rerun this script.
         pause
         exit /b 1
     )
@@ -329,14 +329,14 @@ if "%GSE_TAG%"=="2026_02_16" (
         echo [WARNING] This warning will not be displayed again.
         echo.
         echo   1 - Roschach96's version
-        echo   2 - CHESIRE's version
+        echo   2 - CHESIRE's version ^(Extract all files and overwrite^)
         echo   3 - Both
         choice /C 123 /N /M "Which link do you want to open? (1-3): "
         if errorlevel 3 (
             start "" "https://cs.rin.ru/forum/viewtopic.php?p=3539220#p3539220"
-            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3548848#p3548848"
+            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3587873#p3587873"
         ) else if errorlevel 2 (
-            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3548848#p3548848"
+            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3587873#p3587873"
         ) else (
             start "" "https://cs.rin.ru/forum/viewtopic.php?p=3539220#p3539220"
         )
@@ -606,10 +606,24 @@ REM handles achievements separately.)
 REM ========================================
 if "%AE_STEAM_SCHEMA%"=="0" goto :skip_gen_emu_config
 
-call generate_emu_config\generate_emu_config -acw %gameAppID%
+REM Pick generate_emu_config flag by exe SHA1: the specific build gets -acw; anything else -aw
+set "GEC_EXE=%GBE_CACHE_DIR%\gse_fork_tools\%GSE_TAG%\generate_emu_config\generate_emu_config.exe"
+set "GEC_FLAG=-aw"
+for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash -LiteralPath '%GEC_EXE%' -Algorithm SHA1).Hash"`) do set "GEC_SHA1=%%H"
+if /I "%GEC_SHA1%"=="6DBBF28606E0D904C65C19378C0B2203597C21CF" set "GEC_FLAG=-acw"
+
+call generate_emu_config\generate_emu_config %GEC_FLAG% %gameAppID%
+
+REM Output location differs by flag: -acw -> generate_emu_config\_OUTPUT, -aw -> output (game root)
+if "%GEC_FLAG%"=="-aw" (
+    set "GEC_OUT_DIR=output\%gameAppID%"
+) else (
+    set "GEC_OUT_DIR=generate_emu_config\_OUTPUT\%gameAppID%"
+)
+set "GEC_STEAM_SETTINGS=!GEC_OUT_DIR!\steam_settings"
 
 set "AE_ACHIEVEMENTS_MISSING=0"
-if not exist "generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\achievements.json" set "AE_ACHIEVEMENTS_MISSING=1"
+if not exist "!GEC_STEAM_SETTINGS!\achievements.json" set "AE_ACHIEVEMENTS_MISSING=1"
 
 if "%AE_ACHIEVEMENTS_MISSING%"=="1" (
     echo [INFO] No achievement data found. Waiting up to 30 seconds for the SteamLadder fallback list...
@@ -638,20 +652,25 @@ if "%AE_ACHIEVEMENTS_MISSING%"=="1" (
 if defined TOP_OWNERS_UPDATED (
     if "%AE_ACHIEVEMENTS_MISSING%"=="1" (
         echo [INFO] SteamLadder list is ready; retrying achievement generation with the fallback list.
-        call generate_emu_config\generate_emu_config -acw %gameAppID%
+        call generate_emu_config\generate_emu_config %GEC_FLAG% %gameAppID%
     )
 ) else (
     if "%AE_ACHIEVEMENTS_MISSING%"=="1" echo [WARN] SteamLadder fallback list was not ready; continuing without it.
 )
 
-REM Unzip extra_acw.zip if present (used both for Achievement Watcher export below
-REM and by the adapter for its own achievement-data copy)
-set "outputDir=generate_emu_config\_OUTPUT\%gameAppID%\steam_misc\extra_acw"
-set "zipFile=%outputDir%\extra_acw.zip"
-set "acwExtractDir=%outputDir%\_extracted"
-if exist "%zipFile%" (
-    echo Extracting extra_acw.zip...
-    powershell -Command "Expand-Archive -LiteralPath '%zipFile%' -DestinationPath '%acwExtractDir%' -Force"
+REM Achievement Watcher schema source differs by flag:
+REM   -acw packs it in steam_misc\extra_acw\extra_acw.zip (extract it)
+REM   -aw ships it already extracted under "Achievement Watcher\steam_cache\schema"
+if "%GEC_FLAG%"=="-aw" (
+    set "GEC_SCHEMA_SRC=!GEC_OUT_DIR!\Achievement Watcher\steam_cache\schema"
+) else (
+    set "zipFile=!GEC_OUT_DIR!\steam_misc\extra_acw\extra_acw.zip"
+    set "acwExtractDir=!GEC_OUT_DIR!\steam_misc\extra_acw\_extracted"
+    if exist "!zipFile!" (
+        echo Extracting extra_acw.zip...
+        powershell -Command "Expand-Archive -LiteralPath '!zipFile!' -DestinationPath '!acwExtractDir!' -Force"
+    )
+    set "GEC_SCHEMA_SRC=!acwExtractDir!\steam_cache\schema"
 )
 :skip_gen_emu_config
 echo.
@@ -664,6 +683,7 @@ REM ========================================
 echo Writing %AE_ADAPTER_NAME% configuration...
 set "AE_GAME_FOLDER=%gameFolder%"
 set "AE_GAME_NAME=%gameName%"
+set "AE_GEC_OUT_DIR=%gameFolder%\!GEC_OUT_DIR!"
 set "AE_APP_ID=%gameAppID%"
 set "AE_LAUNCH_ARGS=%LAUNCH_ARGS%"
 set "AE_APPDATA=%AppData%"
@@ -717,7 +737,7 @@ if not exist "%AppData%\Achievement Watcher\steam_cache\schema" (
     echo Achievement Watcher schema folder not found, skipping.
     goto :skip_acw
 )
-set "sourceSchemaRoot=%acwExtractDir%\steam_cache\schema"
+set "sourceSchemaRoot=!GEC_SCHEMA_SRC!"
 set "targetSchemaRoot=%AppData%\Achievement Watcher\steam_cache\schema"
 if not exist "%sourceSchemaRoot%" (
     echo Source schema folder not found: %sourceSchemaRoot%
@@ -775,14 +795,15 @@ echo.
 if "%AE_STEAM_SCHEMA%"=="0" goto :skip_steam_joker
 
 set "gseTarget=%AppData%\Achievements\configs\schema\steam\%gameAppID%"
-if exist "generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\" (
+if exist "!GEC_STEAM_SETTINGS!\" (
     if not exist "%gseTarget%" mkdir "%gseTarget%"
-    xcopy "generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\achievements.json" "%gseTarget%\" /I /Y >nul
-    xcopy "generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\img" "%gseTarget%\img\" /E /I /Y >nul
+    xcopy "!GEC_STEAM_SETTINGS!\achievements.json" "%gseTarget%\" /I /Y >nul
+    xcopy "!GEC_STEAM_SETTINGS!\img" "%gseTarget%\img\" /E /I /Y >nul
 
-    set "achievementsJsonPath=%gameFolder%\generate_emu_config\_OUTPUT\%gameAppID%\steam_settings\achievements.json"
+    set "achievementsJsonPath=%gameFolder%\!GEC_STEAM_SETTINGS!\achievements.json"
     powershell -NoProfile -ExecutionPolicy Bypass -File "%AE_ADAPTER_DIR%\generate_achievement_percentages.ps1" -AppId "%gameAppID%" -AchievementsJsonPath "!achievementsJsonPath!" -OutputRoot "%AppData%\Achievements\configs\schema\steam"
 )
+
 :skip_steam_joker
 echo.
 
@@ -860,6 +881,7 @@ echo Cleaning up setup files and folders...
 
 if exist "release"                                  rmdir /S /Q "release"
 if exist "generate_emu_config"                      rmdir /S /Q "generate_emu_config"
+if exist "output"                                   rmdir /S /Q "output"
 if exist "parse_achievements_schema"                rmdir /S /Q "parse_achievements_schema"
 if exist "parse_controller_vdf"                     rmdir /S /Q "parse_controller_vdf"
 

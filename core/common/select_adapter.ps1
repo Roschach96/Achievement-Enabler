@@ -159,6 +159,29 @@ foreach ($a in $adapters) {
 
 if ($matches.Count -eq 1) {
     $m = $matches[0]
+
+    # EOSSDK is often present only for multiplayer while achievements run
+    # through Steam. Offer a switch to the default (Steam) adapter before
+    # committing to the Epic pipeline.
+    if ($m.Adapter.Id -eq 'epic_nemirtingas_epic_emulator') {
+        $steamDefault = @($adapters | Where-Object { $_.IsDefault }) | Select-Object -First 1
+
+        # Only worth switching if the game actually ships a Steam API DLL.
+        $steamApi = $null
+        foreach ($n in @('steam_api64.dll','steam_api.dll')) {
+            $steamApi = Get-ChildItem -LiteralPath $GameFolder -Recurse -File -Filter $n -Force -ErrorAction SilentlyContinue |
+                Where-Object { -not (Test-Excluded $_.FullName) } |
+                Select-Object -First 1
+            if ($steamApi) { break }
+        }
+
+        if ($steamDefault -and $steamApi) {
+            Write-Host "[INFO] $($steamApi.Name) present - EOSSDK is likely multiplayer-only; using '$($steamDefault.Name)'."
+            Write-Selection $steamDefault.Id $steamDefault.Name $steamDefault.Dir (Resolve-AssetsDir $steamDefault.Dir $steamDefault.AssetsGlob)
+            exit 0
+        }
+    }
+
     Write-Host "[INFO] Auto-detected adapter '$($m.Adapter.Name)'."
     Write-Selection $m.Adapter.Id $m.Adapter.Name $m.Adapter.Dir $m.AssetsDir
     exit 0

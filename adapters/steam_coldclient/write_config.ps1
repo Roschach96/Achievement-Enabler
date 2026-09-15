@@ -34,7 +34,7 @@ if ($missing.Count -gt 0) {
 }
 
 $steamSettings = Join-Path $coldClientPath "steam_settings"
-$outputDir     = Join-Path $gameFolder "generate_emu_config\_OUTPUT\$appId"
+$outputDir = if ($env:AE_GEC_OUT_DIR) { $env:AE_GEC_OUT_DIR } else { Join-Path $gameFolder "generate_emu_config\_OUTPUT\$appId" }
 
 # ── Step 1: fresh _ColdClient scaffold from the GBE Fork template ─────────
 if (Test-Path -LiteralPath $coldClientPath) {

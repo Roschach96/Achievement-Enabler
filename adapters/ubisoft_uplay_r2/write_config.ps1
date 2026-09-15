@@ -76,7 +76,8 @@ foreach ($name in @('upc_r2.ini', 'uplay_r2.ini')) {
 }
 
 # ── Step 2: detect the achievement key prefix from achievements.json ──────
-$achievementFile = Join-Path $gameFolder "generate_emu_config\_OUTPUT\$appId\steam_settings\achievements.json"
+$gecOut = if ($env:AE_GEC_OUT_DIR) { $env:AE_GEC_OUT_DIR } else { Join-Path $gameFolder "generate_emu_config\_OUTPUT\$appId" }
+$achievementFile = Join-Path $gecOut "steam_settings\achievements.json"
 $achPrefix = ""
 if (Test-Path -LiteralPath $achievementFile) {
     try {

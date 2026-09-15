@@ -8,7 +8,8 @@ if (-not $appID) {
 }
 
 # Location of achievement file
-$achievementFile = ".\generate_emu_config\_OUTPUT\$appID\steam_settings\achievements.json"
+$gecOut = if ($env:AE_GEC_OUT_DIR) { $env:AE_GEC_OUT_DIR } else { ".\generate_emu_config\_OUTPUT\$appID" }
+$achievementFile = Join-Path $gecOut "steam_settings\achievements.json"
 
 if (Test-Path $achievementFile) {
     $achievements = Get-Content -Raw -Path $achievementFile | ConvertFrom-Json
