@@ -7,7 +7,7 @@
 #      creates and patches "executable"/"process_name" into it - Jokerverse
 #      has no way to know the real local launcher/exe on its own.
 #
-# If no new/changed config appears within the 10s window, this logs a
+# If no new/changed config appears within the 20s window, this logs a
 # warning and exits successfully - Jokerverse may simply not be running,
 # and that should not fail the overall setup.
 #
@@ -57,7 +57,7 @@ if (-not (Test-Path -LiteralPath $configsDir)) {
     exit 0
 }
 
-Write-Host "[INFO] Watching $configsDir for a new Jokerverse config (up to 10s)..."
+Write-Host "[INFO] Watching $configsDir for a new Jokerverse config (up to 20s)..."
 
 # Baseline: filename -> LastWriteTimeUtc for everything already there before
 # we start watching, so we can tell "new" and "just-modified" apart from
@@ -70,7 +70,7 @@ Get-ChildItem -LiteralPath $configsDir -Filter '*.json' -File -ErrorAction Silen
 $targetFile = $null
 $elapsedMs  = 0
 $pollMs     = 100
-$timeoutMs  = 10000
+$timeoutMs  = 20000
 
 while ($elapsedMs -lt $timeoutMs -and -not $targetFile) {
     Start-Sleep -Milliseconds $pollMs
@@ -89,7 +89,7 @@ while ($elapsedMs -lt $timeoutMs -and -not $targetFile) {
 }
 
 if (-not $targetFile) {
-    Write-Host "[WARN] No new or changed Jokerverse config appeared in $configsDir within 10s - skipping executable/process_name patch."
+    Write-Host "[WARN] No new or changed Jokerverse config appeared in $configsDir within 20s - skipping executable/process_name patch."
     exit 0
 }
 

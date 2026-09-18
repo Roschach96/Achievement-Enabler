@@ -28,7 +28,7 @@ set "DL_ASSET=%~3"
 set "DL_CACHE_ROOT=%~4"
 set "DL_RESULT_CMD=%TEMP%\gbe_download_result_%RANDOM%.cmd"
 set "DL_SELECTED_PATH="
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'Stop'; $progressPreference = 'silentlyContinue'; $headers = @{ 'User-Agent' = 'AchievementEnablerSetup' }; $owner = $env:DL_OWNER; $repo = $env:DL_REPO; $asset = $env:DL_ASSET; $root = $env:DL_CACHE_ROOT; $resultCmd = $env:DL_RESULT_CMD; $repoDir = Join-Path $root $repo; if (-not (Test-Path -LiteralPath $repoDir)) { New-Item -ItemType Directory -Path $repoDir -Force | Out-Null }; function Set-Selected($path) { $q = [char]34; Set-Content -LiteralPath $resultCmd -Value ('set ' + $q + 'DL_SELECTED_PATH=' + $path + $q) -Encoding ASCII }; function Get-ReleasePath($release) { $tag = if ($release.tag_name) { $release.tag_name } else { $release.name }; $safeTag = ($tag.Split([IO.Path]::GetInvalidFileNameChars()) -join '_'); Join-Path (Join-Path $repoDir $safeTag) $asset }; function Try-Asset($release, $label) { $assetInfo = $release.assets | Where-Object { $_.name -eq $asset } | Select-Object -First 1; if (-not $assetInfo) { Write-Host ('[WARN] Asset {0} not found in {1} release {2}.' -f $asset, $label, $release.tag_name); return $false }; $out = Get-ReleasePath $release; $outDir = Split-Path -Parent $out; $tmp = $out + '.download'; if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }; Write-Host ('[INFO] Downloading {0} from {1} release {2}...' -f $asset, $label, $release.tag_name); Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue; try { Invoke-WebRequest -Headers $headers -Uri $assetInfo.browser_download_url -OutFile $tmp; if ((Test-Path -LiteralPath $tmp) -and ((Get-Item -LiteralPath $tmp).Length -gt 0)) { Move-Item -LiteralPath $tmp -Destination $out -Force; Set-Selected $out; Get-ChildItem -LiteralPath $repoDir -Directory | Sort-Object LastWriteTime -Descending | Select-Object -Skip 1 | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue; Write-Host ('[INFO] Removed old cached version: {0}' -f $_.Name) }; return $true } } catch { Write-Host ('[WARN] {0} release download failed: {1}' -f $label, $_.Exception.Message) }; Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue; return $false }; try { $latest = Invoke-RestMethod -Headers $headers -Uri ('https://api.github.com/repos/{0}/{1}/releases/latest' -f $owner, $repo); if (Try-Asset $latest 'latest') { exit 0 }; $all = @(Invoke-RestMethod -Headers $headers -Uri ('https://api.github.com/repos/{0}/{1}/releases?per_page=10' -f $owner, $repo)); $previous = @($all | Where-Object { $_.id -ne $latest.id } | Select-Object -First 1); foreach ($release in $previous) { if (Try-Asset $release 'previous') { exit 0 } } } catch { Write-Host ('[WARN] GitHub release lookup failed: {0}' -f $_.Exception.Message) }; $cached = Get-ChildItem -LiteralPath $repoDir -Filter $asset -Recurse -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if ($cached) { Write-Host ('[WARN] GitHub download failed. Using cached backup: {0}' -f $cached.FullName); Set-Selected $cached.FullName; exit 0 }; Write-Host ('[ERROR] Failed to download {0} from GitHub and no cached backup exists.' -f $asset); exit 1"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'Stop'; $progressPreference = 'silentlyContinue'; $headers = @{ 'User-Agent' = 'AchievementEnablerSetup' }; $owner = $env:DL_OWNER; $repo = $env:DL_REPO; $asset = $env:DL_ASSET; $root = $env:DL_CACHE_ROOT; $resultCmd = $env:DL_RESULT_CMD; $repoDir = Join-Path $root $repo; if (-not (Test-Path -LiteralPath $repoDir)) { New-Item -ItemType Directory -Path $repoDir -Force | Out-Null }; function Set-Selected($path) { $q = [char]34; Set-Content -LiteralPath $resultCmd -Value ('set ' + $q + 'DL_SELECTED_PATH=' + $path + $q) -Encoding ASCII }; function Get-ReleasePath($release) { $tag = if ($release.tag_name) { [string]$release.tag_name } else { [string]$release.name }; $safeTag = ($tag.Split([IO.Path]::GetInvalidFileNameChars()) -join '_'); Join-Path (Join-Path $repoDir $safeTag) $asset }; function Try-Asset($release, $label) { $tagName = if ($release.tag_name) { [string]$release.tag_name } else { [string]$release.name }; $assetInfo = $release.assets | Where-Object { $_.name -eq $asset } | Select-Object -First 1; if (-not $assetInfo) { Write-Host ('[WARN] Asset {0} not found in {1} release {2}.' -f $asset, $label, $tagName); return $false }; $out = Get-ReleasePath $release; $outDir = Split-Path -Parent $out; $tmp = $out + '.download'; if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }; Write-Host ('[INFO] Downloading {0} from {1} release {2}...' -f $asset, $label, $tagName); Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue; try { Invoke-WebRequest -Headers $headers -Uri $assetInfo.browser_download_url -OutFile $tmp; if ((Test-Path -LiteralPath $tmp) -and ((Get-Item -LiteralPath $tmp).Length -gt 0)) { Move-Item -LiteralPath $tmp -Destination $out -Force; Set-Selected $out; Get-ChildItem -LiteralPath $repoDir -Directory | Sort-Object LastWriteTime -Descending | Select-Object -Skip 1 | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue; Write-Host ('[INFO] Removed old cached version: {0}' -f $_.Name) }; return $true } } catch { Write-Host ('[WARN] {0} release download failed: {1}' -f $label, $_.Exception.Message) }; Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue; return $false }; try { $latest = Invoke-RestMethod -Headers $headers -Uri ('https://api.github.com/repos/{0}/{1}/releases/latest' -f $owner, $repo); if (Try-Asset $latest 'latest') { exit 0 }; $all = @(Invoke-RestMethod -Headers $headers -Uri ('https://api.github.com/repos/{0}/{1}/releases?per_page=10' -f $owner, $repo)); foreach ($release in $all) { if ($release.id -eq $latest.id) { continue }; if (Try-Asset $release 'previous') { exit 0 } } } catch { Write-Host ('[WARN] GitHub release lookup failed: {0}' -f $_.Exception.Message) }; $cached = Get-ChildItem -LiteralPath $repoDir -Filter $asset -Recurse -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if ($cached) { Write-Host ('[WARN] GitHub download failed. Using cached backup: {0}' -f $cached.FullName); Set-Selected $cached.FullName; exit 0 }; Write-Host ('[ERROR] Failed to download {0} from GitHub and no cached backup exists.' -f $asset); exit 1"
 set "DL_ERROR=%errorlevel%"
 if exist "%DL_RESULT_CMD%" (
     call "%DL_RESULT_CMD%"
@@ -72,7 +72,7 @@ set "GBE_TAG="
 set "GSE_TAG="
 
 set "GBE_CACHE_DIR=%FCT_CACHE_DIR%"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$h=@{'User-Agent'='AchievementEnablerSetup'}; $lines=@(); function Get-LatestTag($owner,$repo) { try { $r=Invoke-RestMethod -Headers $h -Uri ('https://api.github.com/repos/{0}/{1}/releases/latest' -f $owner,$repo); $t=if($r.tag_name){$r.tag_name}else{$r.name}; return $t.Split([IO.Path]::GetInvalidFileNameChars()) -join '_' } catch { return $null } }; function Test-CachedTag($root,$repo,$tag,$extractedName) { if(-not $tag){return $false}; $d=Join-Path $root (Join-Path $repo $tag); $extracted=Join-Path $d $extractedName; if(-not(Test-Path -LiteralPath $extracted)){return $false}; return [bool](Get-ChildItem -LiteralPath $extracted -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1) }; $gbeLatest=Get-LatestTag 'Detanup01' 'gbe_fork'; $gseLatest=Get-LatestTag 'alex47exe' 'gse_fork_tools'; $gbeOk=Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'release'; $gseOk=Test-CachedTag $env:GBE_CACHE_DIR 'gse_fork_tools' $gseLatest 'generate_emu_config'; Write-Host ('[INFO] GBE Fork  - latest: {0}  cached: {1}' -f $(if($gbeLatest){$gbeLatest}else{'unknown'}),$(if($gbeOk){'yes'}else{'no'})); Write-Host ('[INFO] GSE Tools - latest: {0}  cached: {1}' -f $(if($gseLatest){$gseLatest}else{'unknown'}),$(if($gseOk){'yes'}else{'no'})); if($gbeOk){$lines+='set GBE_SKIP_DL=1'; $lines+='set GBE_SKIP_EX=1'; $lines+=('set GBE_TAG='+$gbeLatest)}; if($gseOk){$lines+='set GSE_SKIP_DL=1'; $lines+='set GSE_SKIP_EX=1'; $lines+=('set GSE_TAG='+$gseLatest)}; if($lines){[System.IO.File]::WriteAllLines($env:TEMP+'\gbe_skip.cmd',$lines,[System.Text.Encoding]::ASCII)}"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$h=@{'User-Agent'='AchievementEnablerSetup'}; $lines=@(); function Get-LatestTag($owner,$repo) { try { $r=Invoke-RestMethod -Headers $h -Uri ('https://api.github.com/repos/{0}/{1}/releases/latest' -f $owner,$repo); $t=if($r.tag_name){$r.tag_name}else{$r.name}; return $t.Split([IO.Path]::GetInvalidFileNameChars()) -join '_' } catch { return $null } }; function Test-CachedTag($root,$repo,$tag,$extractedName) { if(-not $tag){return $false}; $d=Join-Path $root (Join-Path $repo $tag); $extracted=Join-Path $d $extractedName; if(-not(Test-Path -LiteralPath $extracted)){return $false}; return [bool](Get-ChildItem -LiteralPath $extracted -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1) }; $gbeLatest=Get-LatestTag 'Detanup01' 'gbe_fork'; $gseLatest=Get-LatestTag 'alex47exe' 'gse_fork_tools'; $gbeOk=((Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'vs22\release') -and (Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'vs26\release')); $gseOk=Test-CachedTag $env:GBE_CACHE_DIR 'gse_fork_tools' $gseLatest 'generate_emu_config'; Write-Host ('[INFO] GBE Fork  - latest: {0}  cached: {1}' -f $(if($gbeLatest){$gbeLatest}else{'unknown'}),$(if($gbeOk){'yes'}else{'no'})); Write-Host ('[INFO] GSE Tools - latest: {0}  cached: {1}' -f $(if($gseLatest){$gseLatest}else{'unknown'}),$(if($gseOk){'yes'}else{'no'})); if($gbeOk){$lines+='set GBE_SKIP_DL=1'; $lines+='set GBE_SKIP_EX=1'; $lines+=('set GBE_TAG='+$gbeLatest); $lines+=('set GBE_TAG_VS22='+$gbeLatest); $lines+=('set GBE_TAG_VS26='+$gbeLatest)}; if($gseOk){$lines+='set GSE_SKIP_DL=1'; $lines+='set GSE_SKIP_EX=1'; $lines+=('set GSE_TAG='+$gseLatest)}; if($lines){[System.IO.File]::WriteAllLines($env:TEMP+'\gbe_skip.cmd',$lines,[System.Text.Encoding]::ASCII)}"
 
 if exist "%TEMP%\gbe_skip.cmd" (
     call "%TEMP%\gbe_skip.cmd"
@@ -100,20 +100,48 @@ set "SEVENZR_PATH=%DL_SELECTED_PATH%"
 :fct_skip_7zr
 
 if "%GBE_SKIP_DL%"=="0" (
-    echo Downloading GBE Fork archive...
-    call :DownloadGitHubAsset "Detanup01" "gbe_fork" "emu-win-release.7z" "%FCT_CACHE_DIR%"
+    echo Downloading GBE Fork archive ^(VS2022 build^)...
+    call :DownloadGitHubAsset "Detanup01" "gbe_fork" "emu-win-release-vs22.7z" "%FCT_CACHE_DIR%"
     if errorlevel 1 (
-        echo [ERROR] Failed to download GBE Fork archive and no cached backup exists
+        echo [ERROR] Failed to download GBE Fork VS2022 archive and no cached backup exists
         exit /b 1
     )
     call set "GBE_ARCHIVE_PATH=%%DL_SELECTED_PATH%%"
+    set "GBE_VARIANT=vs22"
+    call :ExtractGbe
+    if errorlevel 1 ( exit /b 1 )
+    echo Downloading GBE Fork archive ^(VS2026 build^)...
+    call :DownloadGitHubAsset "Detanup01" "gbe_fork" "emu-win-release-vs26.7z" "%FCT_CACHE_DIR%"
+    if errorlevel 1 (
+        echo [ERROR] Failed to download GBE Fork VS2026 archive and no cached backup exists
+        exit /b 1
+    )
+    call set "GBE_ARCHIVE_PATH=%%DL_SELECTED_PATH%%"
+    set "GBE_VARIANT=vs26"
     call :ExtractGbe
     if errorlevel 1 ( exit /b 1 )
 ) else (
     echo [INFO] GBE Fork already extracted - using cached files.
 )
+echo Selecting GBE Fork build based on Windows version...
+set "GBE_SELECTED_VARIANT=vs22"
+set "GBE_SELECT_CMD=%TEMP%\gbe_select.cmd"
+del "%GBE_SELECT_CMD%" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$v='vs22'; try { $k=Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction Stop; $m=$k.CurrentMajorVersionNumber; if($null -eq $m){ $m=[Environment]::OSVersion.Version.Major }; if([int]$m -ge 10){ $v='vs26' } } catch { $v='vs22' }; $q=[char]34; Set-Content -LiteralPath $env:GBE_SELECT_CMD -Value ('set '+$q+'GBE_SELECTED_VARIANT='+$v+$q) -Encoding ASCII"
+if exist "%GBE_SELECT_CMD%" (
+    call "%GBE_SELECT_CMD%"
+    del "%GBE_SELECT_CMD%" >nul 2>&1
+)
+if /I "%GBE_SELECTED_VARIANT%"=="vs26" (
+    echo [INFO] Windows 10/11 detected - using VS2026 build.
+) else (
+    echo [INFO] Windows 10/11 not detected ^(or check failed^) - using VS2022 build.
+)
+set "GBE_SEL_TAG=%GBE_TAG_VS22%"
+if /I "%GBE_SELECTED_VARIANT%"=="vs26" set "GBE_SEL_TAG=%GBE_TAG_VS26%"
+set "GBE_TAG=%GBE_SEL_TAG%"
 echo Copying GBE Fork files to game folder...
-xcopy "%FCT_CACHE_DIR%\gbe_fork\%GBE_TAG%\release" "%FCT_GAME_FOLDER%\release\" /E /I /Y /Q
+xcopy "%FCT_CACHE_DIR%\gbe_fork\%GBE_SEL_TAG%\%GBE_SELECTED_VARIANT%\release" "%FCT_GAME_FOLDER%\release\" /E /I /Y /Q
 
 if "%GSE_SKIP_DL%"=="0" (
     echo Downloading GSE Tools archive...
@@ -158,8 +186,10 @@ REM path to be passed to 7-Zip when this logic lived inline inside the
 REM if(...) ( ... ) block above.
 :ExtractGbe
 for %%P in ("%GBE_ARCHIVE_PATH%\..") do set "GBE_TAG=%%~nxP"
-echo Extracting GBE Fork to cache...
-"%SEVENZR_PATH%" x -y "%GBE_ARCHIVE_PATH%" -o"%FCT_CACHE_DIR%\gbe_fork\%GBE_TAG%"
+if /I "%GBE_VARIANT%"=="vs22" set "GBE_TAG_VS22=%GBE_TAG%"
+if /I "%GBE_VARIANT%"=="vs26" set "GBE_TAG_VS26=%GBE_TAG%"
+echo Extracting GBE Fork ^(%GBE_VARIANT%^) to cache...
+"%SEVENZR_PATH%" x -y "%GBE_ARCHIVE_PATH%" -o"%FCT_CACHE_DIR%\gbe_fork\%GBE_TAG%\%GBE_VARIANT%"
 if errorlevel 1 (
     echo [ERROR] Extraction failed
     exit /b 1
