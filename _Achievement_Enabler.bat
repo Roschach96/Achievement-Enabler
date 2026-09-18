@@ -722,6 +722,18 @@ if exist "%gameFolder%\_ae_final_exe.cmd" (
 )
 if not defined AE_FINAL_EXECUTABLE set "AE_FINAL_EXECUTABLE=%SELECTED_EXE%"
 
+REM ========================================
+REM STEP 10b: Pre-create the emulator save folder now, before the slower
+REM Step 11/12 work, so Jokerverse has time to notice it and write its
+REM config - shrinking modify_joker_json.ps1's later watch wait. Shared
+REM across every adapter; -CreateFolderOnly makes the folder and exits.
+REM ========================================
+set "AE_EXECUTABLE=%AE_FINAL_EXECUTABLE%"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%AE_ADAPTER_DIR%\modify_joker_json.ps1" -CreateFolderOnly
+if errorlevel 1 (
+    echo [WARN] !AE_ADAPTER_NAME! save-folder pre-create reported an error - check output above.
+)
+
 set "AE_MISSING_STUBS="
 if exist "%gameFolder%\_ae_missing_stubs.cmd" (
     call "%gameFolder%\_ae_missing_stubs.cmd"

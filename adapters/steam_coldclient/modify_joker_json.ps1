@@ -17,6 +17,8 @@
 #   AE_ARGUMENTS    - launch args from SteamCMD (may be empty)
 #   AE_PROCESS_NAME - filename of the game exe (e.g. GameName.exe)
 
+param([switch]$CreateFolderOnly)
+
 $appId       = $env:AE_APP_ID
 $appDataPath = $env:AE_APP_DATA
 $executable  = $env:AE_EXECUTABLE
@@ -26,8 +28,12 @@ $processName = $env:AE_PROCESS_NAME
 $missing = @()
 if (-not $appId)       { $missing += "AE_APP_ID" }
 if (-not $appDataPath) { $missing += "AE_APP_DATA" }
-if (-not $executable)  { $missing += "AE_EXECUTABLE" }
-if (-not $processName) { $missing += "AE_PROCESS_NAME" }
+if (-not $CreateFolderOnly) {
+    # These two are only needed to patch the config Jokerverse writes,
+    # not to create the save folder - skip them in -CreateFolderOnly mode.
+    if (-not $executable)  { $missing += "AE_EXECUTABLE" }
+    if (-not $processName) { $missing += "AE_PROCESS_NAME" }
+}
 
 if ($missing.Count -gt 0) {
     Write-Host "[ERROR] steam_coldclient\modify_joker_json.ps1: missing env var(s): $($missing -join ', ')"
@@ -49,6 +55,8 @@ try {
     Write-Host "[ERROR] Failed to create save folder: $_"
     exit 1
 }
+
+if ($CreateFolderOnly) { exit 0 }
 
 # ---- Watch for a new/changed Jokerverse config file --------------------------
 $configsDir = Join-Path $appDataPath "Achievements\configs"

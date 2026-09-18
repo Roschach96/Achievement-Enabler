@@ -42,6 +42,8 @@
 # for this one (unlike AE_APP_DATA, which the orchestrator already passes
 # explicitly for other reasons).
 
+param([switch]$CreateFolderOnly)
+
 $appDataPath  = $env:AE_APP_DATA
 $gameFolder   = $env:AE_GAME_FOLDER
 $adapterDir   = $env:AE_ADAPTER_DIR
@@ -50,12 +52,15 @@ $processName  = $env:AE_PROCESS_NAME
 $localAppData = $env:LOCALAPPDATA
 
 $missing = @()
-if (-not $appDataPath)  { $missing += "AE_APP_DATA" }
-if (-not $gameFolder)   { $missing += "AE_GAME_FOLDER" }
-if (-not $adapterDir)   { $missing += "AE_ADAPTER_DIR" }
 if (-not $executable)   { $missing += "AE_EXECUTABLE" }
-if (-not $processName)  { $missing += "AE_PROCESS_NAME" }
 if (-not $localAppData) { $missing += "LOCALAPPDATA (standard Windows env var)" }
+if (-not $CreateFolderOnly) {
+    # Only needed once we go on to launch the watcher / patch the config.
+    if (-not $appDataPath) { $missing += "AE_APP_DATA" }
+    if (-not $gameFolder)  { $missing += "AE_GAME_FOLDER" }
+    if (-not $adapterDir)  { $missing += "AE_ADAPTER_DIR" }
+    if (-not $processName) { $missing += "AE_PROCESS_NAME" }
+}
 
 if ($missing.Count -gt 0) {
     Write-Host "[ERROR] ea_origin_emulator\modify_joker_json.ps1: missing env var(s): $($missing -join ', ')"
@@ -80,10 +85,14 @@ if (Test-Path -LiteralPath $metaPath) {
     }
     # Nothing else reads this file after this point - clean it up rather
     # than leaving it sitting in the user's actual game folder.
-    try {
-        Remove-Item -LiteralPath $metaPath -Force
-    } catch {
-        Write-Host "[WARN] Could not remove $metaPath : $_"
+    # Leave the meta file in place during the early -CreateFolderOnly pass;
+    # the real Step 12 pass reads it again and removes it then.
+    if (-not $CreateFolderOnly) {
+        try {
+            Remove-Item -LiteralPath $metaPath -Force
+        } catch {
+            Write-Host "[WARN] Could not remove $metaPath : $_"
+        }
     }
 } else {
     Write-Host "[WARN] $metaPath not found - was write_config.ps1 run first?"
@@ -112,6 +121,8 @@ try {
     Write-Host "[ERROR] Failed to create save folder: $_"
     exit 1
 }
+
+if ($CreateFolderOnly) { exit 0 }
 
 # ── Launch the detached background watcher ──
 $configsDir    = Join-Path $appDataPath "Achievements\configs"
