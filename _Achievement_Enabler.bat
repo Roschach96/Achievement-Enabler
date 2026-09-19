@@ -344,8 +344,8 @@ if "%GSE_TAG%"=="2026_02_16" (
         echo [WARNING] Replace this file with a fixed version:
         echo [WARNING]   !GEC_EXE!
         echo.
-        echo   1 - Roschach96's version (Overwrite the .exe)
-        echo   2 - CHESIRE's version (Overwrite all files)
+        echo   1 - Roschach96's version ^(Overwrite the .exe^)
+        echo   2 - CHESIRE's version ^(Overwrite all files^)
         echo   3 - Both
         choice /C 123 /N /M "Which link do you want to open? (1-3): "
         if errorlevel 3 (
