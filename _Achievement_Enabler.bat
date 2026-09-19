@@ -329,27 +329,30 @@ if errorlevel 1 (
 echo.
 
 REM ========================================
-REM One-time warning: GSE Tools 2026_02_16 ships a broken generate_emu_config.exe
+REM Warn if GSE Tools 2026_02_16 still has the broken generate_emu_config.exe.
+REM Detect by SHA1 of the known-bad build (no marker .txt), so the warning
+REM keeps firing until the file is actually replaced.
 REM ========================================
 if "%GSE_TAG%"=="2026_02_16" (
-    if not exist "%AE_STATE_DIR%\GenerateEmuConfig_2026_02_16_Warning.txt" (
-        copy /b NUL "%AE_STATE_DIR%\GenerateEmuConfig_2026_02_16_Warning.txt" >nul
+    set "GEC_EXE=%SystemDrive%\steamcmd\_GBE fork\gse_fork_tools\2026_02_16\generate_emu_config\generate_emu_config.exe"
+    set "GEC_SHA1="
+    for /f "delims=" %%H in ('powershell -NoProfile -Command "if (Test-Path -LiteralPath '!GEC_EXE!') { (Get-FileHash -LiteralPath '!GEC_EXE!' -Algorithm SHA1).Hash }"') do set "GEC_SHA1=%%H"
+    if /I "!GEC_SHA1!"=="2449D668C1473BDB400AD0B9C853CF7C716AAE76" (
         echo.
-        echo [WARNING] The cached GSE Tools version ^(2026_02_16^) ships a generate_emu_config.exe
-        echo [WARNING] that needs to be replaced before achievement data can be generated correctly.
+        echo [WARNING] The cached GSE Tools version ^(2026_02_16^) ships a broken generate_emu_config.exe
+        echo [WARNING] that must be replaced before achievement data can be generated correctly.
         echo [WARNING] Replace this file with a fixed version:
-        echo [WARNING]   %SystemDrive%\steamcmd\_GBE fork\gse_fork_tools\2026_02_16\generate_emu_config\generate_emu_config.exe
-        echo [WARNING] This warning will not be displayed again.
+        echo [WARNING]   !GEC_EXE!
         echo.
-        echo   1 - Roschach96's version
-        echo   2 - CHESIRE's version ^(Extract all files and overwrite^)
+        echo   1 - Roschach96's version (Overwrite the .exe)
+        echo   2 - CHESIRE's version (Overwrite all files)
         echo   3 - Both
         choice /C 123 /N /M "Which link do you want to open? (1-3): "
         if errorlevel 3 (
             start "" "https://cs.rin.ru/forum/viewtopic.php?p=3539220#p3539220"
-            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3587873#p3587873"
+            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3548848#p3548848"
         ) else if errorlevel 2 (
-            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3587873#p3587873"
+            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3548848#p3548848"
         ) else (
             start "" "https://cs.rin.ru/forum/viewtopic.php?p=3539220#p3539220"
         )
@@ -619,11 +622,25 @@ REM handles achievements separately.)
 REM ========================================
 if "%AE_STEAM_SCHEMA%"=="0" goto :skip_gen_emu_config
 
-REM Pick generate_emu_config flag by exe SHA1: the specific build gets -acw; anything else -aw
+REM Pick generate_emu_config flag:
+REM   GSE Tools newer than 2026_02_16 -> -acw
+REM   else the one known-good build    -> -acw (by SHA1)
+REM   else                             -> -aw
 set "GEC_EXE=%GBE_CACHE_DIR%\gse_fork_tools\%GSE_TAG%\generate_emu_config\generate_emu_config.exe"
 set "GEC_FLAG=-aw"
-for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash -LiteralPath '%GEC_EXE%' -Algorithm SHA1).Hash"`) do set "GEC_SHA1=%%H"
-if /I "%GEC_SHA1%"=="6DBBF28606E0D904C65C19378C0B2203597C21CF" set "GEC_FLAG=-acw"
+
+REM Date tags (YYYY_MM_DD) compare numerically once underscores are stripped.
+set "GSE_TAG_NUM=%GSE_TAG:_=%"
+set "GEC_TAG_IS_NUM=1"
+for /f "delims=0123456789" %%C in ("!GSE_TAG_NUM!") do set "GEC_TAG_IS_NUM=0"
+if "!GSE_TAG_NUM!"=="" set "GEC_TAG_IS_NUM=0"
+if "!GEC_TAG_IS_NUM!"=="1" if !GSE_TAG_NUM! GTR 20260216 set "GEC_FLAG=-acw"
+
+REM Older/equal tags: fall back to the known-good build's SHA1.
+if "!GEC_FLAG!"=="-aw" (
+    for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash -LiteralPath '%GEC_EXE%' -Algorithm SHA1).Hash"`) do set "GEC_SHA1=%%H"
+    if /I "!GEC_SHA1!"=="6DBBF28606E0D904C65C19378C0B2203597C21CF" set "GEC_FLAG=-acw"
+)
 
 REM Output location differs by flag: -acw -> generate_emu_config\_OUTPUT, -aw -> generate_emu_config\output
 if "%GEC_FLAG%"=="-aw" (
