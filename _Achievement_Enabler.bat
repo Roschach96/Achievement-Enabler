@@ -384,12 +384,27 @@ if not exist "%dummyCredsFile%" (
     pause
     exit /b 1
 )
-set "_credLine=0"
-for /f "usebackq delims=" %%A in ("%dummyCredsFile%") do (
-    set /a _credLine+=1
-    if "!_credLine!"=="1" set "GSE_CFG_USERNAME=%%A"
-    if "!_credLine!"=="2" set "GSE_CFG_PASSWORD=%%A"
-)
+REM --- Read creds with delayed expansion OFF so ! ^ % in the password
+REM --- survive intact; trim trailing spaces. endlocal passthrough keeps them.
+setlocal DisableDelayedExpansion
+set "_u="
+set "_p="
+for /f "usebackq delims=" %%A in ("%dummyCredsFile%") do if not defined _u set "_u=%%A"
+for /f "usebackq skip=1 delims=" %%A in ("%dummyCredsFile%") do if not defined _p set "_p=%%A"
+:_ae_trimU
+if not defined _u goto _ae_trimUend
+if not "%_u:~-1%"==" " goto _ae_trimUend
+set "_u=%_u:~0,-1%"
+goto _ae_trimU
+:_ae_trimUend
+:_ae_trimP
+if not defined _p goto _ae_trimPend
+if not "%_p:~-1%"==" " goto _ae_trimPend
+set "_p=%_p:~0,-1%"
+goto _ae_trimP
+:_ae_trimPend
+endlocal & set "GSE_CFG_USERNAME=%_u%" & set "GSE_CFG_PASSWORD=%_p%"
+
 if not defined GSE_CFG_USERNAME (
     echo [ERROR] Line 1 ^(username^) missing or empty in dummy_account.txt
     pause
