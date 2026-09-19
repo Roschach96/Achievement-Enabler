@@ -1,30 +1,26 @@
 # adapters\ea_origin_emulator\modify_joker_json.ps1
 #
-# Mirrors epic_nemirtingas_epic_emulator's own modify_joker_json.ps1 in
-# spirit (not hand-assembling a full Jokerverse config from a static
-# template), but with one key difference confirmed directly: Jokerverse
-# creates a game's config on its OWN independent detection cycle - whenever
-# it next notices no config exists yet for that Steam appid - completely
-# decoupled from anything this setup script does. The .json can appear well
-# after this script has already finished running, so waiting synchronously
-# for it here (what an earlier version of this script did, for up to ~15s)
-# can never reliably catch it.
+# Jokerverse creates a game's config on its OWN independent detection cycle -
+# whenever it next notices no config exists yet for that Steam appid -
+# completely decoupled from anything this setup script does. The .json can
+# appear well after this script has already finished running, so waiting
+# synchronously for it here can never reliably catch it.
 #
 # So this script:
 #   1. Creates the empty save-data folder anadius's own emulator uses:
 #        %LocalAppData%\anadius\LSX emu\achievement_watcher\{SteamAppId}
-#   2. Launches _watch_and_patch_joker_config.ps1 as a DETACHED background
-#      process (Start-Process -WindowStyle Hidden) and returns immediately -
-#      it does not block the setup run waiting for Jokerverse. That watcher
-#      keeps running independently (up to ~3 minutes) and patches
-#      "executable"/"process_name" into whatever config Jokerverse
-#      eventually creates for this Steam appid - including re-patching if
-#      Jokerverse rewrites it again later (e.g. on a subsequent launch),
-#      since it can't know the real local exe on its own. Confirmed
-#      directly: left unpatched, Jokerverse fills process_name with a naive
-#      parse of the Steam manifest's link2ea://... launch URI (taking
-#      whatever follows the last "/" as if it were a filename), producing
-#      garbage like "1938010?platform=steam&theme=BOhni".
+#   2. Launches the SHARED watcher core\common\watch_and_patch_joker_config.ps1
+#      as a DETACHED background process (Start-Process -WindowStyle Hidden)
+#      and returns immediately. That watcher keeps running independently (up
+#      to ~3 minutes) and patches "executable"/"process_name" into whatever
+#      config Jokerverse eventually creates for this Steam appid (matched on
+#      the "appid" field) - including re-patching if Jokerverse rewrites it
+#      again later. Confirmed directly: left unpatched, Jokerverse fills
+#      process_name with a naive parse of the Steam manifest's link2ea://...
+#      launch URI, producing garbage like "1938010?platform=steam&theme=...".
+#
+# (The watcher used to live in this adapter folder; it now lives in
+# core\common\ and is shared by every adapter, so the local copy is gone.)
 #
 # The Steam appid comes from _origin_helper_meta.txt, which origin_helper.py
 # writes next to anadius.cfg after resolving it via ITAD - this script does
@@ -67,7 +63,7 @@ if ($missing.Count -gt 0) {
     exit 1
 }
 
-# ── Read origin_helper.py's metadata file for the Steam appid ──
+# -- Read origin_helper.py's metadata file for the Steam appid --
 # _origin_helper_meta.txt sits next to anadius.cfg, which write_config.ps1
 # writes into the SELECTED EXE's own folder (which can be nested arbitrarily
 # deep under the game root, e.g. 00_game\target_origin\ex\) - not
@@ -124,9 +120,10 @@ try {
 
 if ($CreateFolderOnly) { exit 0 }
 
-# ── Launch the detached background watcher ──
+# -- Launch the shared detached background watcher --
 $configsDir    = Join-Path $appDataPath "Achievements\configs"
-$watcherScript = Join-Path $adapterDir "_watch_and_patch_joker_config.ps1"
+$commonDir     = Join-Path (Split-Path -Parent (Split-Path -Parent $adapterDir)) "core\common"
+$watcherScript = Join-Path $commonDir "watch_and_patch_joker_config.ps1"
 
 if (-not (Test-Path -LiteralPath $watcherScript)) {
     Write-Host "[ERROR] $watcherScript not found - cannot patch Jokerverse's config once it appears."
@@ -138,13 +135,11 @@ try {
     # -ArgumentList's array-to-command-line conversion has known inconsistent
     # quoting behavior across PowerShell versions when a value contains
     # spaces (near-certain here - $executable/$configsDir are real Windows
-    # paths, e.g. under "C:\Users\<name>\AppData\..." or a game folder with
-    # spaces in its name). An unquoted space would split that value into
-    # multiple arguments in the child process's command line, breaking its
-    # own parameter binding - which fails fast, matching a process that
-    # exits almost immediately instead of running for the full 3 minutes.
+    # paths). An unquoted space would split that value into multiple
+    # arguments in the child process's command line, breaking its own
+    # parameter binding.
     $argString = "-NoProfile -ExecutionPolicy Bypass -File `"$watcherScript`" " +
-                 "-ConfigsDir `"$configsDir`" -SteamAppId `"$steamAppId`" " +
+                 "-ConfigsDir `"$configsDir`" -AppId `"$steamAppId`" " +
                  "-Executable `"$executable`" -ProcessName `"$processName`""
 
     Start-Process -FilePath "powershell.exe" -WindowStyle Hidden -ArgumentList $argString
