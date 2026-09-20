@@ -8,9 +8,10 @@ type: Bug
 
 ---
 
-**Describe the bug**
+**Describe the bug and attach AE_log.txt**
 - A clear and concise description of what the bug is.
-- Paste the lines of the error here in the bug report.
+- Right click on "_Achievement_Enabler.bat", change the "@echo off" to "@echo on" and rerun the script from the game's folder.
+  At the end of the script's run, there will be a AE_log.txt, attach that to the issue.
 
 **To Reproduce**
 Steps to reproduce the behavior, example:

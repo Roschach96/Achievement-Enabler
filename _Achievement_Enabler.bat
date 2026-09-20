@@ -2,6 +2,31 @@
 setlocal EnableDelayedExpansion
 
 REM ============================================================================
+REM DEBUG LOGGING TOGGLE
+REM Change the very first line of this file from "@echo off" to "@echo on" to
+REM turn on debug mode: the whole run (every batch command + all PowerShell
+REM output) is teed to AE_log.txt next to this .bat, and AE_DEBUG=1 is exported
+REM so the .ps1 steps can write their own logs too. Leave it as "@echo off" for
+REM normal, quiet operation. Detection reads line 1 of this file, so it is
+REM locale-independent (does not rely on the "ECHO is on/off" message).
+REM ============================================================================
+set "AE_DEBUG="
+for /f "usebackq delims=" %%L in ("%~f0") do set "AE_FIRSTLINE=%%L" & goto :ae_dbg_checked
+:ae_dbg_checked
+set "AE_FL=!AE_FIRSTLINE!"
+echo/!AE_FL!| findstr /i /b /c:"@echo on" >nul && set "AE_DEBUG=1"
+
+if defined AE_DEBUG if not defined AE_LOG_ACTIVE (
+    set "AE_LOG_FILE=%~dp0AE_log.txt"
+    set "AE_LOG_ACTIVE=1"
+    echo [DEBUG] Debug mode ON - logging this run to "!AE_LOG_FILE!"
+    REM Relaunch self; child inherits AE_LOG_ACTIVE so it skips this block and
+    REM runs the body. Merge stderr and tee stdout to console + AE_log.txt.
+    cmd /c ""%~f0" %*" 2>&1 | powershell -NoProfile -ExecutionPolicy Bypass -Command "$input | Tee-Object -FilePath '%~dp0AE_log.txt'"
+    exit /b !errorlevel!
+)
+
+REM ============================================================================
 REM AchievementEnabler.bat
 REM
 REM Single entry point that replaces the old separate Goldberg/ColdClient and
@@ -131,6 +156,15 @@ for /f "delims=" %%D in ('dir /B /AD /O:-D "%AE_STATE_DIR%" 2^>nul') do (
         set "AE_CURRENT_TAG_FOUND=1"
     )
 )
+
+REM Show the installed version (newest marker folder under %AE_STATE_DIR%).
+REM First run -> no marker folder yet -> "Unknown".
+if defined AE_CURRENT_TAG_FOUND (
+    echo [INFO] Version: !AE_CURRENT_TAG!
+) else (
+    echo [INFO] Version: Unknown
+)
+echo.
 
 REM ========================================
 REM First run: no %AE_STATE_DIR%\<tag>\ folder exists yet, so there is no
