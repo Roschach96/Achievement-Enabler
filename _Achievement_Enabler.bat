@@ -467,26 +467,17 @@ if not exist "%dummyCredsFile%" (
     pause
     exit /b 1
 )
-REM --- Read creds with delayed expansion OFF so ! ^ % in the password
-REM --- survive intact; trim trailing spaces. endlocal passthrough keeps them.
-setlocal DisableDelayedExpansion
-set "_u="
-set "_p="
-for /f "usebackq delims=" %%A in ("%dummyCredsFile%") do if not defined _u set "_u=%%A"
-for /f "usebackq skip=1 delims=" %%A in ("%dummyCredsFile%") do if not defined _p set "_p=%%A"
+
+REM --- Read creds with set /p: stores each line literally, so ! ^ % & " etc.
+REM --- survive under EnableDelayedExpansion. Trim trailing spaces.
+<"%dummyCredsFile%" (
+    set /p "GSE_CFG_USERNAME="
+    set /p "GSE_CFG_PASSWORD="
+)
 :_ae_trimU
-if not defined _u goto _ae_trimUend
-if not "%_u:~-1%"==" " goto _ae_trimUend
-set "_u=%_u:~0,-1%"
-goto _ae_trimU
-:_ae_trimUend
+if defined GSE_CFG_USERNAME if "!GSE_CFG_USERNAME:~-1!"==" " (set "GSE_CFG_USERNAME=!GSE_CFG_USERNAME:~0,-1!" & goto _ae_trimU)
 :_ae_trimP
-if not defined _p goto _ae_trimPend
-if not "%_p:~-1%"==" " goto _ae_trimPend
-set "_p=%_p:~0,-1%"
-goto _ae_trimP
-:_ae_trimPend
-endlocal & set "GSE_CFG_USERNAME=%_u%" & set "GSE_CFG_PASSWORD=%_p%"
+if defined GSE_CFG_PASSWORD if "!GSE_CFG_PASSWORD:~-1!"==" " (set "GSE_CFG_PASSWORD=!GSE_CFG_PASSWORD:~0,-1!" & goto _ae_trimP)
 
 if not defined GSE_CFG_USERNAME (
     echo [ERROR] Line 1 ^(username^) missing or empty in dummy_account.txt
