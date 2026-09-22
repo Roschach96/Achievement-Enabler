@@ -282,6 +282,55 @@ echo [INFO] Using adapter: %AE_ADAPTER_NAME%  (id: %AE_ADAPTER_ID%)
 echo.
 
 REM ========================================
+REM Warn early if nothing can track achievements for this adapter.
+REM - steam_coldclient records unlocks itself -> never warns.
+REM - Uplay R1/R2 can use Achievement Watcher OR the Achievements app.
+REM - GOG/Epic/EA can only use the Achievements app (Achievement Watcher
+REM   supports Steam + Uplay only).
+REM ========================================
+if /I "%AE_ADAPTER_ID%"=="steam_coldclient" goto :skip_tracker_warn
+set "AE_HAS_TRACKER="
+if exist "%AppData%\Achievements\" set "AE_HAS_TRACKER=1"
+set "AE_AW_OK="
+if "%AE_ADAPTER_ID%"=="ubisoft_uplay_r1" set "AE_AW_OK=1"
+if "%AE_ADAPTER_ID%"=="ubisoft_uplay_r2" set "AE_AW_OK=1"
+if defined AE_AW_OK if exist "%AppData%\Achievement Watcher\" set "AE_HAS_TRACKER=1"
+if defined AE_HAS_TRACKER goto :skip_tracker_warn
+echo [WARNING] No compatible achievement tracker was found for this game.
+echo [WARNING] !AE_ADAPTER_NAME! does not track achievements on its own.
+echo [WARNING] Unlocks will be saved to your machine but you will not get
+echo [WARNING] achievement notifications and you will not be able to view
+echo [WARNING] them until you install one of these applications:
+echo.
+echo [WARNING]   Achievements (Jokerverse) app  -  actively updated, recommended
+echo [WARNING]     https://github.com/PSerban93/Achievements/releases/latest
+if defined AE_AW_OK echo.
+if defined AE_AW_OK echo [WARNING]   Achievement Watcher  -  NO LONGER MAINTAINED, use only if you prefer it
+if defined AE_AW_OK echo [WARNING]     https://github.com/xan105/Achievement-Watcher/releases/latest
+if not defined AE_AW_OK echo [WARNING]   (Achievement Watcher cannot track this platform)
+echo.
+if defined AE_AW_OK (
+    choice /C AWB /N /M "Open a download page?  A = Achievements  W = Achievement Watcher  B = both: "
+    if errorlevel 3 (
+        start "" "https://github.com/PSerban93/Achievements/releases/latest"
+        start "" "https://github.com/xan105/Achievement-Watcher/releases/latest"
+    ) else if errorlevel 2 (
+        start "" "https://github.com/xan105/Achievement-Watcher/releases/latest"
+    ) else (
+        start "" "https://github.com/PSerban93/Achievements/releases/latest"
+    )
+) else (
+    choice /C YN /N /M "Open the Achievements app download page now? (Y/N): "
+    if errorlevel 2 goto :tracker_warn_done
+    start "" "https://github.com/PSerban93/Achievements/releases/latest"
+)
+:tracker_warn_done
+echo.
+pause
+echo.
+:skip_tracker_warn
+
+REM ========================================
 REM Non-Steam adapters (no Steam schema/manifest to fetch - they resolve
 REM their own App ID and achievement data independently) are listed here
 REM once. Every downstream Steam-only step gates on AE_STEAM_SCHEMA instead
@@ -820,8 +869,8 @@ if defined AE_MISSING_STUBS (
 echo.
 
 REM ========================================
-REM STEP 11: Achievement Watcher export (Steam-only - Achievement Watcher
-REM tracks Steam achievement caches, so this is skipped whenever AE_STEAM_SCHEMA=0 (GOG/Epic/EA)
+REM STEP 11: Achievement Watcher export
+REM Tracks Steam achievement caches, so this is skipped whenever AE_STEAM_SCHEMA=0 (GOG/Epic/EA)
 REM ========================================
 if "%AE_STEAM_SCHEMA%"=="0" goto :skip_acw
 if not exist "%AppData%\Achievement Watcher\steam_cache\schema" (
