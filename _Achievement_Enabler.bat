@@ -821,7 +821,7 @@ echo.
 
 REM ========================================
 REM STEP 11: Achievement Watcher export (Steam-only - Achievement Watcher
-REM tracks Steam achievement caches, so this is skipped for gog_universelan)
+REM tracks Steam achievement caches, so this is skipped whenever AE_STEAM_SCHEMA=0 (GOG/Epic/EA)
 REM ========================================
 if "%AE_STEAM_SCHEMA%"=="0" goto :skip_acw
 if not exist "%AppData%\Achievement Watcher\steam_cache\schema" (
@@ -852,48 +852,29 @@ echo Achievement Watcher schema files updated.
 echo.
 
 REM ========================================
-REM STEP 12: Jokerverse Achievements export (shared, if the app is installed)
+REM STEP 12: Jokerverse - launch the config-patch watcher
+REM Jokerverse creates each game's config .json AND its achievement schema on
+REM its own detection cycle now, so nothing is copied or generated here.
+REM modify_joker_json.ps1 just ensures the emulator save folder exists (already
+REM made once in STEP 10 via -CreateFolderOnly) and launches the shared detached
+REM watcher, which patches executable/process_name into the config Jokerverse
+REM eventually writes.
 REM ========================================
 if not exist "%AppData%\Achievements\" (
     echo Achievements app folder not found in AppData, skipping Jokerverse export.
     goto :skip_joker
 )
 
-set "targetDir=%AppData%\Achievements\configs"
-if "%AE_ADAPTER_ID%"=="gog_universelan" (
-    set "targetJsonPath=%targetDir%\%gameName% (GOG).json"
-) else if "%AE_ADAPTER_ID%"=="epic_nemirtingas_epic_emulator" (
-    set "targetJsonPath=%targetDir%\%gameName%.json"
-) else (
-set "targetJsonPath=%targetDir%\%gameName%.json"
-)
-
-set "AE_SOURCE_JSON=%AE_ADAPTER_DIR%\GameSample.json"
-set "AE_DEST_JSON=%targetJsonPath%"
 set "AE_EXECUTABLE=%AE_FINAL_EXECUTABLE%"
 set "AE_ARGUMENTS=%LAUNCH_ARGS%"
 set "AE_PROCESS_NAME=%processName%"
-set "AE_MANIFEST_FILE=%manifestFile%"
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%AE_ADAPTER_DIR%\modify_joker_json.ps1"
 if errorlevel 1 (
     echo [WARN] !AE_ADAPTER_NAME! modify_joker_json.ps1 reported an error - check output above.
 )
-echo.
 
-if "%AE_STEAM_SCHEMA%"=="0" goto :skip_steam_joker
-
-set "gseTarget=%AppData%\Achievements\configs\schema\steam\%gameAppID%"
-if exist "!GEC_STEAM_SETTINGS!\" (
-    if not exist "%gseTarget%" mkdir "%gseTarget%"
-    xcopy "!GEC_STEAM_SETTINGS!\achievements.json" "%gseTarget%\" /I /Y >nul
-    xcopy "!GEC_STEAM_SETTINGS!\img" "%gseTarget%\img\" /E /I /Y >nul
-
-    set "achievementsJsonPath=%gameFolder%\!GEC_STEAM_SETTINGS!\achievements.json"
-    powershell -NoProfile -ExecutionPolicy Bypass -File "%AE_ADAPTER_DIR%\generate_achievement_percentages.ps1" -AppId "%gameAppID%" -AchievementsJsonPath "!achievementsJsonPath!" -OutputRoot "%AppData%\Achievements\configs\schema\steam"
-)
-
-:skip_steam_joker
+:skip_joker
 echo.
 
 REM ========================================
