@@ -2,7 +2,7 @@
 name: Bug report
 about: Create a report to help us fix the problems
 title: "[BUG] "
-labels: bug, question
+labels: question
 assignees: ''
 type: Bug
 
@@ -11,8 +11,6 @@ type: Bug
 **Describe the bug and attach AE_log.txt**
 - A clear and concise description of what the bug is.
 - Right click on "_Achievement_Enabler.bat", change the "@echo off" to "@echo on" and rerun the script from the game's folder.
-This will enable "Debug mode", it outputs AE_log.txt next to _Achievement_Enabler.bat.
-Please upload that file as attachment.
   At the end of the script's run, there will be a "AE_log.txt" next to "_Achievement_Enabler.bat", attach that to the issue.
 
 **To Reproduce**
