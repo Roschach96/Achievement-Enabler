@@ -289,6 +289,7 @@ if errorlevel 1 (
     echo [ERROR] Copy to Backup folder failed
     exit /b 1
 )
+del /S /Q "%FSU_BACKUP_DIR%\dummy_account.txt.example" >nul 2>&1
 goto :fsu_backup_copy_done
 :fsu_skip_backup_copy
 echo [WARN] No Backup folder set - skipping copy step.
