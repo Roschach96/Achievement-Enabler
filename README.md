@@ -24,7 +24,6 @@ These don't need additional adapter files:
 
 ```
 _Achievement_Enabler.bat               <- the only script you run from the game's folder
-dummy_account.txt.example              <- rename it to dummy_account.txt and fill in your "throwaway Steam account" details
 core/
  └─ common/
     ├─ select_adapter.ps1              <- scans adapters/*/adapter.json, picks one
