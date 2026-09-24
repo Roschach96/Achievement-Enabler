@@ -448,7 +448,7 @@ if "%GSE_TAG%"=="2026_02_16" (
 :skip_core_tools
 
 REM ========================================
-REM STEP 3: Dummy Steam credentials for generate_emu_config
+REM STEP 3: Throwaway Steam credentials for generate_emu_config
 REM (Steam-schema only - GOG has no Steam achievement schema to fetch, so
 REM gog_universelan skips this entirely and needs no dummy_account.txt.)
 REM ========================================
@@ -461,8 +461,8 @@ if not exist "%dummyCredsFile%" (
     echo.
     echo [ERROR] dummy_account.txt not found: !dummyCredsFile!
     echo [ERROR] Create this file next to the script with:
-    echo         Line 1: a dummy Steam account username
-    echo         Line 2: a dummy Steam account password
+    echo         Line 1: a throwaway Steam account username
+    echo         Line 2: a throwaway Steam account password
     echo.
     pause
     exit /b 1
