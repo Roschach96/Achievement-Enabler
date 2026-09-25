@@ -468,12 +468,15 @@ if not exist "%dummyCredsFile%" (
     exit /b 1
 )
 
-REM --- Read creds with set /p: stores each line literally, so ! ^ % & " etc.
-REM --- survive under EnableDelayedExpansion. Trim trailing spaces.
-<"%dummyCredsFile%" (
+REM --- Normalize line endings first (LF-only files break set /p), then read
+REM --- creds with set /p so ! ^ % & " survive under EnableDelayedExpansion.
+set "_credTmp=%TEMP%\ae_dummy_creds_%RANDOM%.txt"
+more < "%dummyCredsFile%" > "%_credTmp%"
+<"%_credTmp%" (
     set /p "GSE_CFG_USERNAME="
     set /p "GSE_CFG_PASSWORD="
 )
+del /Q "%_credTmp%" >nul 2>&1
 :_ae_trimU
 if defined GSE_CFG_USERNAME if "!GSE_CFG_USERNAME:~-1!"==" " (set "GSE_CFG_USERNAME=!GSE_CFG_USERNAME:~0,-1!" & goto _ae_trimU)
 :_ae_trimP
@@ -671,8 +674,8 @@ if not defined PY_EXE (
 if not defined PY_EXE (
     set "GSE_BASE_LIST_TAG="
     set "GSE_FORK_TOOLS_DIR_CHECK=%SystemDrive%\steamcmd\_GBE fork\gse_fork_tools"
-    if exist "%GSE_FORK_TOOLS_DIR_CHECK%" (
-        for /f "delims=" %%D in ('dir /b /ad /o-n "%GSE_FORK_TOOLS_DIR_CHECK%" 2^>nul') do (
+    if exist "!GSE_FORK_TOOLS_DIR_CHECK!" (
+        for /f "delims=" %%D in ('dir /b /ad /o-n "!GSE_FORK_TOOLS_DIR_CHECK!" 2^>nul') do (
             if not defined GSE_BASE_LIST_TAG set "GSE_BASE_LIST_TAG=%%D"
         )
     )
@@ -681,7 +684,7 @@ if not defined PY_EXE (
     if defined GSE_BASE_LIST_TAG (
         echo [WARN] Without it, the script will use the base list from
         echo [WARN] gse_fork_tools instead, which only contains games up to
-        echo [WARN] %GSE_BASE_LIST_TAG%.
+        echo [WARN] !GSE_BASE_LIST_TAG!.
     ) else (
         echo [WARN] Without it, the script will use the base list from
         echo [WARN] gse_fork_tools instead, which only contains games up to
