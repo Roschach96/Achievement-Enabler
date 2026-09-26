@@ -1,0 +1,52 @@
+name: Bug report
+description: Create a report to help us fix the problems
+title: "[BUG] "
+labels: [bug]
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If you don't receive a reply to your issue in 24 hours, please contact **Roschach96** on RIN with a private message.
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: AE_log.txt (required)
+      description: |
+        1. Right click on `_Achievement_Enabler.bat`, change `@echo off` to `@echo on`.
+        2. Rerun the script from the game's folder.
+        3. Drag & drop the generated `AE_log.txt` (found in the same folder where you ran `_Achievement_Enabler.bat`) into this box.
+      placeholder: Drop AE_log.txt here
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: To Reproduce
+      value: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here.
