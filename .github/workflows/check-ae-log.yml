@@ -12,11 +12,24 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
-            const body = context.payload.issue.body || '';
+            const issue = context.payload.issue;
+            const body = issue.body || '';
             const ok = /\/user-attachments\/files\/\d+\/AE_log\.txt\b/i.test(body);
             const issue_number = context.issue.number;
             const label = 'missing-log';
-            const labels = context.payload.issue.labels.map(l => l.name);
+            const tag = 'MISSING LOG';
+            const labels = issue.labels.map(l => l.name);
+
+            // Title without any existing tags
+            const base = issue.title
+              .replace(/^\s*\[BUG\]\s*/i, '')
+              .replace(new RegExp(`^\\s*${tag}\\s*`, 'i'), '')
+              .trim();
+
+            const newTitle = ok ? `[BUG] ${base}` : `[BUG] ${tag} ${base}`;
+            if (newTitle !== issue.title) {
+              await github.rest.issues.update({ ...context.repo, issue_number, title: newTitle });
+            }
 
             if (!ok) {
               if (!labels.includes(label)) {
