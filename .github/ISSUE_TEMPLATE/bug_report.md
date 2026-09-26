@@ -12,6 +12,7 @@ type: Bug
 - A clear and concise description of what the bug is.
 - Right click on "_Achievement_Enabler.bat", change the "@echo off" to "@echo on" and rerun the script from the game's folder.
   At the end of the script's run, there will be a "AE_log.txt" next to "_Achievement_Enabler.bat", attach that to the issue.
+If you don't receive reply to your issue in 24 hours, please contact Roschach96 on RIN with private message.
 
 **To Reproduce**
 Steps to reproduce the behavior, example:

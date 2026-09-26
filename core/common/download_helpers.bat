@@ -290,6 +290,8 @@ if errorlevel 1 (
     exit /b 1
 )
 del /S /Q "%FSU_BACKUP_DIR%\dummy_account.txt.example" >nul 2>&1
+del /Q "%FSU_BACKUP_DIR%\LICENSE" >nul 2>&1
+rmdir /S /Q "%FSU_BACKUP_DIR%\.github" >nul 2>&1
 goto :fsu_backup_copy_done
 :fsu_skip_backup_copy
 echo [WARN] No Backup folder set - skipping copy step.
