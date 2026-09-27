@@ -15,7 +15,7 @@ These don't need additional adapter files:
 ## Usage
 
 1. Extract the zipped release to a folder
-2. (GOG, EA and Epic don't need this step) Create dummy_account.txt and fill in your "throwaway Steam account" details
+2. (GOG, EA and Epic don't need this step) Create `%SystemDrive%\steamcmd\_AchievementEnabler\dummy_account.txt` (line 1: username, line 2: password) and fill in your "throwaway Steam account" details
 4. Keep a backup of these files somewhere because the script will delete all script related files from the game's folder after it finishes
 5. Copy all script files to the game's main folder
 6. Run _Achievement_Enabler.bat and follow the steps

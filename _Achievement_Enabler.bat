@@ -261,7 +261,15 @@ if defined UPDATE_AVAILABLE (
 
 if not exist "%SystemDrive%\steamcmd" mkdir "%SystemDrive%\steamcmd"
 
-if not exist "%AE_STATE_DIR%\AntivirusWarningDisplayed.txt" (
+REM Defender exclusion check: 0 = OK, 1 = missing exclusions, 2 = unknown,
+REM 3 = third-party AV (named on screen) -> 2/3 fall back to the one-time warning.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%COMMON_DIR%\check_defender_exclusions.ps1" -Paths "%SystemDrive%\steamcmd|%gameFolder%"
+set "AE_AV_RC=%errorlevel%"
+if "%AE_AV_RC%"=="1" (
+    choice /C YN /N /M "Continue anyway? [Y/N]: "
+    if errorlevel 2 exit /b 1
+)
+if %AE_AV_RC% GEQ 2 if not exist "%AE_STATE_DIR%\AntivirusWarningDisplayed.txt" (
     copy /b NUL "%AE_STATE_DIR%\AntivirusWarningDisplayed.txt" >nul
     echo.
     echo [WARNING] Please add %SystemDrive%\steamcmd and all folders that contain your games to your Antivirus exception list.
