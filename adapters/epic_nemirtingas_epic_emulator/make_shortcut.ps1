@@ -68,6 +68,16 @@ namespace AchievementEnablerEpic {
         void GetCurFile([MarshalAs(UnmanagedType.LPWStr)] out string ppszFileName);
     }
 
+    [ComImport, Guid("45e2b4ae-b1c3-11d0-b92f-00a0c90312e1"),
+     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IShellLinkDataList {
+        void AddDataBlock(IntPtr pDataBlock);
+        void CopyDataBlock(uint dwSig, out IntPtr ppDataBlock);
+        void RemoveDataBlock(uint dwSig);
+        void GetFlags(out uint pdwFlags);
+        void SetFlags(uint dwFlags);
+    }
+
     public static class ShortcutHelper {
         public static bool Create(string lnkPath, string target, string args, string workDir,
                                   string iconPath, int iconIndex) {
@@ -76,6 +86,11 @@ namespace AchievementEnablerEpic {
             link.SetArguments(args);
             link.SetWorkingDirectory(workDir);
             link.SetIconLocation(iconPath, iconIndex);
+            // Run as administrator by default (SLDF_RUNAS_USER = 0x2000)
+            var dl = (IShellLinkDataList) link;
+            uint flags;
+            dl.GetFlags(out flags);
+            dl.SetFlags(flags | 0x00002000);
             var pf = (IPersistFile) link;
             pf.Save(lnkPath, true);
 
