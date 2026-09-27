@@ -109,6 +109,13 @@ REM ========================================
 set "AE_STATE_DIR=%SystemDrive%\steamcmd\_AchievementEnabler"
 if not exist "%AE_STATE_DIR%" md "%AE_STATE_DIR%" >nul 2>&1
 
+REM Migrate a legacy dummy_account.txt sitting next to the .bat into
+REM %AE_STATE_DIR% (the only location read from now on).
+if exist "%TOOLS_DIR%dummy_account.txt" (
+    copy /Y "%TOOLS_DIR%dummy_account.txt" "%AE_STATE_DIR%\dummy_account.txt" >nul
+    echo [INFO] Copied dummy_account.txt to %AE_STATE_DIR%
+)
+
 REM ========================================
 REM Backup folder: where the updater copies the latest downloaded
 REM release so the script always knows the "current version" is whatever
@@ -456,11 +463,11 @@ set "GSE_CFG_USERNAME="
 set "GSE_CFG_PASSWORD="
 if "%AE_STEAM_SCHEMA%"=="0" goto :skip_dummy_creds
 
-set "dummyCredsFile=%TOOLS_DIR%dummy_account.txt"
+set "dummyCredsFile=%AE_STATE_DIR%\dummy_account.txt"
 if not exist "%dummyCredsFile%" (
     echo.
     echo [ERROR] dummy_account.txt not found: !dummyCredsFile!
-    echo [ERROR] Create this file next to the script with:
+    echo [ERROR] Create this file in %AE_STATE_DIR% with:
     echo         Line 1: a throwaway Steam account username
     echo         Line 2: a throwaway Steam account password
     echo.
