@@ -528,6 +528,11 @@ if not defined foundAppIDFile (
         "  $sub = Get-ChildItem -Path $dir -Filter 'steam_appid.txt' -Depth 1 -ErrorAction SilentlyContinue | Select-Object -First 1;" ^
         "  if ($sub) { $found = $sub.FullName; break }" ^
         "};" ^
+        "if (-not $found) {" ^
+        "  $found = Get-ChildItem -LiteralPath $env:AE_GAME_FOLDER -Filter 'steam_appid.txt' -File -Recurse -Depth 3 -ErrorAction SilentlyContinue |" ^
+        "    Where-Object { $_.DirectoryName -notmatch 'release|generate_emu_config|parse_achievements_schema|parse_controller_vdf|_ColdClient|GoldbergUplayR2' } |" ^
+        "    Sort-Object { $_.FullName.Split('\').Count } | Select-Object -First 1 -ExpandProperty FullName" ^
+        "};" ^
         "if ($found) { $found }"') do set "foundAppIDFile=%%F"
 )
 
