@@ -3,28 +3,20 @@
 # Checks the project's own GitHub repo for newer releases:
 #   https://github.com/Roschach96/Achievement-Enabler
 #
-# Primary method: compares the currently-installed tag (--current-tag, the
-# name of the newest %SystemDrive%\steamcmd\_AchievementEnabler\<tag>\
-# marker folder that exists on disk) against the release list from the
-# GitHub API. Every release listed ABOVE --current-tag in the API's
-# (already latest-first) release list counts as "newer".
+# Compares --current-tag (the AE_VERSION string hardcoded at the top of
+# _Achievement_Enabler.bat, e.g. "V5.7") against every release tag from the
+# GitHub API by version number. Every release with a higher version counts
+# as "newer".
 #
-# Fallback method (used only when --current-tag is "unknown" or isn't
-# found in the release list - e.g. no marker folder exists yet on first
-# run): compares --current-mtime, an ISO-8601 UTC timestamp of the running
-# .bat file's own last-modified date, against each release's publish date.
-# This is the old method, kept around only for that transition period
-# before the first marker folder gets created.
-#
-# Either way, tags in --skip-file (one tag per line - the caller appends
+# Tags in --skip-file (one tag per line - the caller appends
 # to it when the user chooses "skip") are excluded. Uses the public GitHub
 # REST API only (no browser/Playwright needed).
 
 import argparse
 import json
+import re
 import urllib.error
 import urllib.request
-from datetime import datetime
 from pathlib import Path
 
 REPO = "Roschach96/Achievement-Enabler"
@@ -37,8 +29,15 @@ DEFAULT_OUT_FILE = DEFAULT_TEMP_DIR / "ae_update_check_result.cmd"
 DEFAULT_CHANGELOG_FILE = DEFAULT_TEMP_DIR / "ae_update_changelog.txt"
 
 
-def parse_iso8601(value):
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+def parse_version(tag):
+    """'V5.7' -> (5, 7). Returns None if the tag has no version number."""
+    nums = re.findall(r"\d+", tag or "")
+    if not nums:
+        return None
+    parts = [int(n) for n in nums]
+    while len(parts) > 1 and parts[-1] == 0:
+        parts.pop()  # V5 == V5.0
+    return tuple(parts)
 
 
 def fetch_releases():
@@ -68,10 +67,7 @@ def load_skip_set(skip_file):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--current-tag", required=True,
-                         help='Tag name of the newest installed marker folder, or "unknown" if none exists yet')
-    parser.add_argument("--current-mtime", default=None,
-                         help="ISO-8601 UTC timestamp of the running .bat file's last write time; "
-                              "used as a fallback only while --current-tag is unresolvable")
+                         help='Hardcoded AE_VERSION from the .bat, e.g. "V5.7"')
     parser.add_argument("--result-file", type=Path, default=DEFAULT_OUT_FILE)
     parser.add_argument("--changelog-file", type=Path, default=DEFAULT_CHANGELOG_FILE)
     parser.add_argument("--skip-file", type=Path, default=None,
@@ -93,56 +89,26 @@ def main():
         r for r in releases if not r.get("draft") and not r.get("prerelease")
     ]
 
-    tag_found = any(
-        (r.get("tag_name") or "?") == args.current_tag for r in non_draft_releases
-    )
+    current_ver = parse_version(args.current_tag)
+    if current_ver is None:
+        print("[WARN] Could not parse current version '{0}'.".format(args.current_tag))
+        return
 
-    if tag_found:
-        # Releases come back latest-first. Everything up to (not including)
-        # the current tag's position is "newer".
-        newer = []
-        for release in non_draft_releases:
-            tag = release.get("tag_name") or "?"
-            if tag == args.current_tag:
-                break
-            if tag in skip_set:
-                continue
-            newer.append({
-                "tag": tag,
-                "body": (release.get("body") or "").strip(),
-                "url": release.get("html_url") or REPO_URL,
-            })
-    else:
-        # Fallback (old method): current tag is "unknown" or predates the
-        # API window - compare by publish date against --current-mtime instead.
-        current_dt = None
-        if args.current_mtime:
-            try:
-                current_dt = parse_iso8601(args.current_mtime)
-            except ValueError as e:
-                print("[WARN] Could not parse --current-mtime '{0}': {1}".format(args.current_mtime, e))
-
-        newer = []
-        for release in non_draft_releases:
-            tag = release.get("tag_name") or "?"
-            if tag in skip_set:
-                continue
-            if current_dt is not None:
-                published_raw = release.get("published_at") or release.get("created_at")
-                if not published_raw:
-                    continue
-                try:
-                    published_dt = parse_iso8601(published_raw)
-                except ValueError:
-                    continue
-                if published_dt.date() <= current_dt.date():
-                    continue
-            newer.append({
-                "tag": tag,
-                "body": (release.get("body") or "").strip(),
-                "url": release.get("html_url") or REPO_URL,
-            })
-        newer.reverse()  # oldest-missed-first, matching the tag-based branch's ordering
+    newer = []
+    for release in non_draft_releases:
+        tag = release.get("tag_name") or "?"
+        if tag in skip_set:
+            continue
+        ver = parse_version(tag)
+        if ver is None or ver <= current_ver:
+            continue
+        newer.append({
+            "ver": ver,
+            "tag": tag,
+            "body": (release.get("body") or "").strip(),
+            "url": release.get("html_url") or REPO_URL,
+        })
+    newer.sort(key=lambda r: r["ver"], reverse=True)  # latest-first
 
     if not newer:
         print("[INFO] No newer, non-skipped releases were found.")

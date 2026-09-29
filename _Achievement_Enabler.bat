@@ -1,5 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
+REM VERSION - update by hand on every release. Must match the GitHub release tag exactly (e.g. V5.8).
+set "AE_VERSION=V5.8"
 
 REM ============================================================================
 REM DEBUG LOGGING TOGGLE
@@ -97,14 +99,9 @@ echo.
 echo This tool patches a game folder to enable achievements.
 echo.
 
-for /f "delims=" %%T in ('powershell -NoProfile -Command "(Get-Item -LiteralPath '%~f0').LastWriteTimeUtc.ToString('o')"') do set "SCRIPT_MTIME=%%T"
-
 REM ========================================
 REM Kick off the update check in the background - non-blocking.
-REM Once a %AE_STATE_DIR%\<tag>\ marker folder exists, compares against
-REM that tag's position in the release list. Until then (first run, no
-REM marker yet), falls back to comparing this .bat file's own last-modified
-REM date against each release's publish date.
+REM Compares the hardcoded AE_VERSION against the GitHub release tags.
 REM ========================================
 set "AE_STATE_DIR=%SystemDrive%\steamcmd\_AchievementEnabler"
 if not exist "%AE_STATE_DIR%" md "%AE_STATE_DIR%" >nul 2>&1
@@ -118,8 +115,7 @@ if exist "%TOOLS_DIR%dummy_account.txt" (
 
 REM ========================================
 REM Backup folder: where the updater copies the latest downloaded
-REM release so the script always knows the "current version" is whatever
-REM sits in %AE_STATE_DIR%. Asked once, then cached in a config file.
+REM release. Asked once, then cached in a config file.
 REM ========================================
 set "AE_BACKUP_CONFIG=%AE_STATE_DIR%\backup_folder.cfg"
 set "AE_BACKUP_DIR="
@@ -150,60 +146,8 @@ set "UPDATE_LOG=%AE_STATE_DIR%\ae_update_check.log"
 if exist "%UPDATE_RESULT_CMD%" del /Q "%UPDATE_RESULT_CMD%" >nul 2>&1
 set "UPDATE_SKIP_FILE=%AE_STATE_DIR%\Achievement Enabler skipped versions.txt"
 
-REM Current installed tag = the newest %AE_STATE_DIR%\<tag>\ marker folder
-REM that exists on disk (tags sort latest-first by folder LastWriteTime,
-REM since a marker is only ever created for a tag just seen/skipped).
-REM No marker folders yet -> "unknown", so check_update.py falls back to
-REM comparing --current-mtime against each release's publish date instead
-REM (old method, used only until the first marker folder is created).
-set "AE_CURRENT_TAG=unknown"
-for /f "delims=" %%D in ('dir /B /AD /O:-D "%AE_STATE_DIR%" 2^>nul') do (
-    if not defined AE_CURRENT_TAG_FOUND (
-        set "AE_CURRENT_TAG=%%D"
-        set "AE_CURRENT_TAG_FOUND=1"
-    )
-)
-
-REM Show the installed version (newest marker folder under %AE_STATE_DIR%).
-REM First run -> no marker folder yet -> "Unknown".
-if defined AE_CURRENT_TAG_FOUND (
-    echo [INFO] Version: !AE_CURRENT_TAG!
-) else (
-    echo [INFO] Version: Unknown
-)
+echo [INFO] Version: %AE_VERSION%
 echo.
-
-REM ========================================
-REM First run: no %AE_STATE_DIR%\<tag>\ folder exists yet, so there is no
-REM baseline to compare against. Rather than starting from "unknown" and
-REM only catching up on the NEXT run, fetch the latest release right now
-REM (synchronously - this has to finish before anything below can rely on
-REM a known-current script version) and apply it, so this run already has
-REM a real starting point on disk.
-REM ========================================
-if not defined AE_CURRENT_TAG_FOUND (
-    echo.
-    echo [INFO] No installed version on record yet - fetching the latest release to establish one...
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { $h=@{'User-Agent'='AchievementEnablerSetup'}; $r=Invoke-RestMethod -Headers $h -Uri 'https://api.github.com/repos/Roschach96/Achievement-Enabler/releases/latest'; Write-Output $r.tag_name } catch { exit 1 }" >"%TEMP%\ae_bootstrap_tag.txt" 2>nul
-    set "AE_BOOTSTRAP_QUERY_OK=!errorlevel!"
-    if "!AE_BOOTSTRAP_QUERY_OK!"=="0" call :ApplyBootstrap
-    if not "!AE_BOOTSTRAP_QUERY_OK!"=="0" echo [WARN] Could not reach GitHub to determine the latest release. Continuing with "unknown" - will retry next run.
-    del "%TEMP%\ae_bootstrap_tag.txt" >nul 2>&1
-)
-goto :after_bootstrap
-
-:ApplyBootstrap
-set /p "AE_BOOTSTRAP_TAG=" <"%TEMP%\ae_bootstrap_tag.txt"
-if not defined AE_BOOTSTRAP_TAG exit /b 0
-call "%COMMON_DIR%\download_helpers.bat" FetchSelfUpdate "!AE_BOOTSTRAP_TAG!" "!AE_STATE_DIR!" "!AE_BACKUP_DIR!"
-if errorlevel 1 (
-    echo [WARN] Bootstrap download of !AE_BOOTSTRAP_TAG! failed. Continuing with "unknown" - will retry next run.
-) else (
-    set "AE_CURRENT_TAG=!AE_BOOTSTRAP_TAG!"
-    echo [INFO] Established !AE_BOOTSTRAP_TAG! as the current version. Copied to Backup folder: !AE_BACKUP_DIR!
-)
-exit /b 0
-:after_bootstrap
 
 set "UC_PY="
 set "UC_PY_ARG="
@@ -228,7 +172,7 @@ if exist "%UPDATE_STAMP_FILE%" (
 if defined UC_PY if "%UC_DUE%"=="1" (
     echo.
     echo [INFO] Checking for Achievement Enabler updates...
-    "%UC_PY%" %UC_PY_ARG% "%COMMON_DIR%\check_update.py" --current-tag "%AE_CURRENT_TAG%" --current-mtime "%SCRIPT_MTIME%" --result-file "%UPDATE_RESULT_CMD%" --changelog-file "%UPDATE_CHANGELOG_FILE%" --skip-file "%UPDATE_SKIP_FILE%" >"%UPDATE_LOG%" 2>&1
+    "%UC_PY%" %UC_PY_ARG% "%COMMON_DIR%\check_update.py" --current-tag "%AE_VERSION%" --result-file "%UPDATE_RESULT_CMD%" --changelog-file "%UPDATE_CHANGELOG_FILE%" --skip-file "%UPDATE_SKIP_FILE%" >"%UPDATE_LOG%" 2>&1
     set "UC_STARTED=1"
     >"%UPDATE_STAMP_FILE%" echo %DATE% %TIME%
 )
