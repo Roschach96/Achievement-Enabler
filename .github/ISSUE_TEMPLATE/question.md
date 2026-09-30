@@ -1,5 +1,5 @@
 ---
-name: Use this if you have a question
+name: Question
 about: Ask a question about using or setting up Achievement Enabler
 title: "[QUESTION] "
 labels: question
