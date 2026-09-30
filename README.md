@@ -20,6 +20,10 @@ These don't need additional adapter files:
 5. Copy all script files to the game's main folder
 6. Run _Achievement_Enabler.bat and follow the steps
 
+## Settings
+The settings of Achievement Enabler can be found in the folder below where you can change them:
+"%SystemDrive%\steamcmd\_AchievementEnabler\"
+
 ## Layout
 
 ```
