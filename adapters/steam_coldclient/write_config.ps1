@@ -262,12 +262,24 @@ try {
         $mode = [string]$LASTEXITCODE
         if ($mode -notin @('1','2','3')) { $mode = '1' }
         Set-Content -LiteralPath $notifyFile -Encoding ASCII -Value @(
-            '# Achievement Enabler - notification mode for Steam (ColdClient) games',
-            '# 1 = Only the Achievements (Jokerverse) app notifications',
-            '# 2 = Both (Achievements app + GBE experimental overlay)',
-            '# 3 = Ask per game',
-            '# ProgressNotifications (mode 2 only): 1 = show GBE overlay progress, 0 = hide',
-            '# Change the numbers below, or delete this file to be asked again.',
+            '# ============================================================',
+            '#  Achievement Enabler - achievement notification settings',
+            '#  (Steam games set up with ColdClient)',
+            '# ============================================================',
+            '#',
+            '#  NotificationMode - where achievement pop-ups appear:',
+            '#     1 = Achievements app only',
+            '#     2 = Achievements app + in-game GBE overlay',
+            '#     3 = Ask me for every game',
+            '#',
+            '#  ProgressNotifications - only used when NotificationMode=2:',
+            '#     1 = Overlay also shows progress (e.g. "5/10")',
+            '#     0 = Overlay shows unlocks only',
+            '#',
+            '#  To change: edit a number below and save.',
+            '#  To reset:  delete this file - you will be asked again.',
+            '# ============================================================',
+            '',
             "NotificationMode=$mode"
         )
         Write-Host "[INFO] Saved notification mode $mode to: $notifyFile"
