@@ -1,4 +1,4 @@
-name: Use this if you have problems
+name: Bug report
 description: Create a report to help us fix the problems
 title: "[BUG] "
 labels: [bug]
