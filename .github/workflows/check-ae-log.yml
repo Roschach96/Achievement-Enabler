@@ -16,6 +16,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (!github.event.issue.pull_request &&
+       github.event.issue.state != 'closed' &&
        contains(github.event.issue.labels.*.name, 'bug'))
     runs-on: ubuntu-latest
     steps:
@@ -24,6 +25,7 @@ jobs:
           script: |
             const issue_number = context.payload.issue?.number ?? Number(context.payload.inputs.issue);
             const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number });
+            if (issue.state === 'closed') { core.info(`#${issue_number} is closed - skipping.`); return; }
             const label = 'missing-log';
             const tag = '-- MISSING LOG --';
             const labels = issue.labels.map(l => l.name);
