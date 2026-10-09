@@ -137,6 +137,7 @@ cause a false positive):
   ```
   Option 1 runs fully automatically as it expects uncracked, unmodified Steam
   game files.
+
   Option 2 sets `VOICES38=1`, and near the end of the run (after the shortcut
   is created) the script renames the original loader DLL aside, pauses for
   the user to apply the crack files, then removes the crack's unneeded files
