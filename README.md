@@ -126,19 +126,21 @@ cause a false positive):
   crack files first, then rerun.
 - **`steam_coldclient` selected** — first searches the game folder for
   `voices38.dll`. Found → stops unconditionally and tells the user to
-  reinstall the game, then rerun (a `voices38.dll` already sitting in the
-  folder means the install is in a state this script can't safely work
-  with). Not found → shows a prompt:
+  reinstall the game without crack files, then rerun (a `voices38.dll`
+  already sitting in the folder means the the game is already cracked
+  and the script can't safely work.
+  Not found → shows a prompt:
   ```
   Do you want to use the script for a Clean Steam Files game or for a voices38 release game?
     1 - Clean Steam Files
     2 - voices38 release
   ```
-  Option 1 runs fully automatically. Option 2 sets `VOICES38=1`, and near
-  the end of the run (after the shortcut is created) the script renames the
-  loader DLL aside, pauses for the user to (re)apply the crack files, then
-  removes the crack's leftover files and restores the loader DLL from
-  backup.
+  Option 1 runs fully automatically as it expects uncracked, unmodified Steam
+  game files.
+  Option 2 sets `VOICES38=1`, and near the end of the run (after the shortcut
+  is created) the script renames the original loader DLL aside, pauses for
+  the user to apply the crack files, then removes the crack's unneeded files
+  and restores the original loader DLL from backup.
 
 ## How adapter auto-detection works
 
