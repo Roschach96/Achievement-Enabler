@@ -135,7 +135,7 @@ cause a false positive):
     1 - Clean Steam Files
     2 - voices38 release
   ```
-  Option 1 runs fully automatically as it expects uncracked, unmodified Steam
+  Option 1 runs fully automatically as it expects uncracked, unmodified, original Steam
   game files.
 
   Option 2 sets `VOICES38=1`, and near the end of the run (after the shortcut
