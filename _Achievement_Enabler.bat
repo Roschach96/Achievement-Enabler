@@ -24,7 +24,7 @@ if defined AE_DEBUG if not defined AE_LOG_ACTIVE (
     echo [DEBUG] Debug mode ON - logging this run to "!AE_LOG_FILE!"
     REM Relaunch self; child inherits AE_LOG_ACTIVE so it skips this block and
     REM runs the body. Merge stderr and tee stdout to console + AE_log.txt.
-    cmd /c ""%~f0" %*" 2>&1 | powershell -NoProfile -ExecutionPolicy Bypass -Command "$input | Tee-Object -FilePath '%~dp0AE_log.txt'"
+    cmd /c ""%~f0" %*" 2>&1 | powershell -NoProfile -ExecutionPolicy Bypass -Command "$input | Tee-Object -FilePath $env:AE_LOG_FILE"
     exit /b !errorlevel!
 )
 
@@ -537,7 +537,7 @@ if not exist "%steamcmdExe%" (
 )
 
 echo [INFO] Fetching Steam manifest for AppID %gameAppID%...
-powershell -NoProfile -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $out = & '%steamcmdExe%' +login anonymous +app_info_update 1 +app_info_print %gameAppID% +quit 2>&1; [System.IO.File]::WriteAllLines('%manifestFile%', $out, [System.Text.UTF8Encoding]::new($false))"
+powershell -NoProfile -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $out = & $env:steamcmdExe +login anonymous +app_info_update 1 +app_info_print %gameAppID% +quit 2>&1; [System.IO.File]::WriteAllLines($env:manifestFile, $out, [System.Text.UTF8Encoding]::new($false))"
 
 if exist "%manifestFile%" (
     echo [INFO] Parsing launch arguments from manifest...
