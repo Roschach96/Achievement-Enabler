@@ -1,7 +1,7 @@
 # adapters\gog_universelan\modify_joker_json.ps1
 # Jokerverse creates the game's config .json itself, on its own detection
 # cycle - so this adapter no longer writes it. Mirroring the EA adapter, this:
-#   1. Creates UniverseLAN's own save-data folder (Local\UniverseLAN\<appid>).
+#   1. Creates UniverseLAN's own save-data folder (%LocalAppData%\UniverseLAN\<appid>).
 #   2. Launches core\common\watch_and_patch_joker_config.ps1 as a DETACHED
 #      background process and returns immediately - it does not block setup.
 #      That watcher patches "executable"/"process_name" into whatever config
@@ -65,7 +65,10 @@ if (-not $appId) {
 }
 Write-Host "[INFO] GOG App ID detected: $appId"
 
-$savePath = Join-Path $appDataPath "Local\UniverseLAN\$appId"
+# Must match deploy_universelan.ps1 and where UniverseLAN reads achievements:
+# %LocalAppData%\UniverseLAN\<appid>. AE_APP_DATA is Roaming (%AppData%), so
+# joining "Local\..." onto it produced Roaming\Local\UniverseLAN - wrong.
+$savePath = Join-Path $env:LOCALAPPDATA "UniverseLAN\$appId"
 
 Write-Host "[INFO] Jokerverse config generation is skipped for this adapter - creating empty save folder instead."
 
