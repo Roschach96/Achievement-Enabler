@@ -1,7 +1,6 @@
 @echo off
 setlocal EnableDelayedExpansion
-REM VERSION - update by hand on every release. Must match the GitHub release tag exactly (e.g. V5.8).
-set "AE_VERSION=V5.8"
+set "AE_VERSION=V5.9"
 
 REM ============================================================================
 REM DEBUG LOGGING TOGGLE
