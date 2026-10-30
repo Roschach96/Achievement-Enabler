@@ -126,17 +126,23 @@ cause a false positive):
   crack files first, then rerun.
 - **`steam_coldclient` selected** — first searches the game folder for
   `voices38.dll`. Found → stops unconditionally and tells the user to
-  reinstall the game without crack files, then rerun (a `voices38.dll`
-  already sitting in the folder means the the game is already cracked
-  and the script can't safely work.
+  reinstall the game without crack files, then rerun.
+  (A `voices38.dll` already sitting in the folder means the the game
+  is already cracked and the script can't safely work.)
   Not found → shows a prompt:
   ```
-  Do you want to use the script for a Clean Steam Files game or for a voices38 release game?
-    1 - Clean Steam Files
+  Do you want to use the script for a Clean Steam Files/RUNE game or for a voices38 release game?
+    1 - Clean Steam Files / RUNE release
     2 - voices38 release
   ```
   Option 1 runs fully automatically as it expects uncracked, unmodified, original Steam
-  game files.
+  game files. RUNE releases are handled by the same option: the game folder is
+  searched recursively for `*.rne` files (RUNE's renamed originals). For each one,
+  the cracked counterpart with the same base name (e.g. `steam_api64.dll`,
+  `Resonance.exe`) is renamed to `.crk`, and the `.rne` gets the counterpart's
+  extension back — restoring the clean Steam files. Any `steam_emu.ini` in the
+  game folder is then deleted. With no `.rne` files present
+  this step does nothing.
 
   Option 2 sets `VOICES38=1`, and near the end of the run (after the shortcut
   is created) the script renames the original loader DLL aside, pauses for

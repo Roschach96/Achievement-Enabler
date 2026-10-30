@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableDelayedExpansion
-set "AE_VERSION=V5.9"
+set "AE_VERSION=V6.0"
 
 REM ============================================================================
 REM DEBUG LOGGING TOGGLE
@@ -343,13 +343,23 @@ if "%AE_ADAPTER_ID%"=="steam_coldclient" (
         exit /b 1
     )
     echo.
-    echo Do you want to use the script for a Clean Steam Files game or for a voices38 release game?
-    echo   1 - Clean Steam Files
+    echo Do you want to use the script for a Clean Steam Files/RUNE game or for a voices38 release game?
+    echo   1 - Clean Steam Files / RUNE release
     echo   2 - voices38 release
     echo.
     choice /C 12 /N /M "Select an option (1-2): "
     if errorlevel 2 set "VOICES38=1"
     echo.
+)
+REM --- RUNE: swap *.rne originals back in (cracked counterpart -> *.crk).
+REM --- No-op when no .rne files exist, so plain Clean Steam Files are unaffected.
+if "%AE_ADAPTER_ID%"=="steam_coldclient" if "%VOICES38%"=="0" (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%COMMON_DIR%\restore_rune_originals.ps1" -GameFolder "%gameFolder%"
+    if errorlevel 1 (
+        echo [ERROR] Could not restore all RUNE original files. Fix the warnings above, then rerun this script.
+        pause
+        exit /b 1
+    )
 )
 
 REM ========================================
@@ -359,7 +369,7 @@ REM skipped entirely for gog_universelan, which uses none of it.
 REM ========================================
 set "GBE_CACHE_DIR=%SystemDrive%\steamcmd\_GBE fork"
 if "%AE_STEAM_SCHEMA%"=="0" goto :skip_core_tools
-
+echo.
 echo Fetching shared emulator tooling (GBE Fork + GSE Tools)...
 call "%COMMON_DIR%\download_helpers.bat" FetchCoreTools "%gameFolder%" "%GBE_CACHE_DIR%"
 if errorlevel 1 (
