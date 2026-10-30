@@ -132,8 +132,8 @@ cause a false positive):
   Not found → shows a prompt:
   ```
   Do you want to use the script for a Clean Steam Files/RUNE game or for a voices38 release game?
-    1 - Clean Steam Files / RUNE release
-    2 - voices38 release
+    1 - Clean Steam Files / RUNE Steam release
+    2 - voices38 Steam release
   ```
   Option 1 runs fully automatically as it expects uncracked, unmodified, original Steam
   game files. RUNE releases are handled by the same option: the game folder is
