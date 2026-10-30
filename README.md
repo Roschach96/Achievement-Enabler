@@ -127,7 +127,7 @@ cause a false positive):
 - **`steam_coldclient` selected** — first searches the game folder for
   `voices38.dll`. Found → stops unconditionally and tells the user to
   reinstall the game without crack files, then rerun.
-  (A `voices38.dll` already sitting in the folder means the the game
+  (A `voices38.dll` already sitting in the folder means that the game
   is already cracked and the script can't safely work.)
   Not found → shows a prompt:
   ```
