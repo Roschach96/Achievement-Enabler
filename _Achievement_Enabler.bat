@@ -344,8 +344,8 @@ if "%AE_ADAPTER_ID%"=="steam_coldclient" (
     )
     echo.
     echo Do you want to use the script for a Clean Steam Files/RUNE game or for a voices38 release game?
-    echo   1 - Clean Steam Files / RUNE release
-    echo   2 - voices38 release
+    echo   1 - Clean Steam Files / RUNE Steam release
+    echo   2 - voices38 Steam release
     echo.
     choice /C 12 /N /M "Select an option (1-2): "
     if errorlevel 2 set "VOICES38=1"
