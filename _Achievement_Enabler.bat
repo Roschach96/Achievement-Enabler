@@ -573,6 +573,10 @@ if exist "%gameFolder%\_ae_launch_args.cmd" (
     call "%gameFolder%\_ae_launch_args.cmd"
     del /Q "%gameFolder%\_ae_launch_args.cmd"
 )
+if "!LAUNCH_ARGS!"=="" (
+    set "LAUNCH_ARGS=-pc-platform=Steam"
+    echo [INFO] No launch arguments found - using fallback: -pc-platform=Steam
+)
 echo.
 echo Steam AppID: %gameAppID%
 echo.
