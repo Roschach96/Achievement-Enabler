@@ -135,32 +135,6 @@ if ((Test-Path -LiteralPath $achievementsJson) -and (Test-Path -LiteralPath $per
     & $percentScript -AppId $appId -AchievementsJsonPath $achievementsJson -InjectInPlace
 }
 
-# ── Step 4b: mirror achievements.json + img into every folder a local ──────
-# configs.main.ini was deleted from (list written by ensure_gse_global_settings.ps1)
-$deletedListFile = Join-Path $gameFolder '_ae_deleted_cfg_dirs.txt'
-if (Test-Path -LiteralPath $deletedListFile) {
-    $srcImg = Join-Path $steamSettings 'img'
-    foreach ($destDir in @(Get-Content -LiteralPath $deletedListFile -Encoding UTF8 | Where-Object { $_.Trim() })) {
-        try {
-            if (-not (Test-Path -LiteralPath $destDir)) {
-                New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-            }
-            if (Test-Path -LiteralPath $achievementsJson) {
-                Copy-Item -LiteralPath $achievementsJson -Destination $destDir -Force
-            }
-            if (Test-Path -LiteralPath $srcImg) {
-                $destImg = Join-Path $destDir 'img'
-                if (Test-Path -LiteralPath $destImg) { Remove-Item -LiteralPath $destImg -Recurse -Force }
-                Copy-Item -LiteralPath $srcImg -Destination $destImg -Recurse -Force
-            }
-            Write-Host "[INFO] achievements.json + img copied into: $destDir"
-        } catch {
-            Write-Host "[WARN] Could not copy achievements.json/img into ${destDir}: $_"
-        }
-    }
-    Remove-Item -LiteralPath $deletedListFile -Force -ErrorAction SilentlyContinue
-}
-
 # ── Step 5: patch ColdClientLoader.ini ─────────────────────────────────────
 $iniPath = Join-Path $coldClientPath "ColdClientLoader.ini"
 
@@ -441,6 +415,46 @@ function Set-DenuvoConfigsUserIni {
     }
 }
 Set-DenuvoConfigsUserIni
+
+# ── Step 8b: copy _ColdClient\steam_settings contents into every other ───
+# steam_settings folder in the game folder (excluding _ColdClient and the
+# temporary release / generate_emu_config setup folders). Existing
+# files are never overwritten - only missing files/folders are added.
+$ccSettingsFull = (Get-Item -LiteralPath $steamSettings).FullName.TrimEnd('\')
+$srcFiles = @(Get-ChildItem -LiteralPath $ccSettingsFull -Recurse -File -Force -ErrorAction SilentlyContinue)
+$targets  = New-Object System.Collections.Generic.List[string]
+$stack    = New-Object System.Collections.Generic.Stack[string]
+$stack.Push($gameFolder)
+while ($stack.Count -gt 0) {
+    $dir = $stack.Pop()
+    try {
+        Get-ChildItem -LiteralPath $dir -Directory -Force -ErrorAction Stop | ForEach-Object {
+            if ($_.Name -in @('_ColdClient', 'release', 'generate_emu_config')) { return }
+            if ($_.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { return }
+            if ($_.Name -ieq 'steam_settings') { $targets.Add($_.FullName) }
+            $stack.Push($_.FullName)
+        }
+    } catch { }
+}
+$copied = 0
+foreach ($destRoot in $targets) {
+    foreach ($f in $srcFiles) {
+        $rel  = $f.FullName.Substring($ccSettingsFull.Length).TrimStart('\')
+        $dest = Join-Path $destRoot $rel
+        if (Test-Path -LiteralPath $dest) { continue }
+        try {
+            $destDir = Split-Path -Parent $dest
+            if (-not (Test-Path -LiteralPath $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+            Copy-Item -LiteralPath $f.FullName -Destination $dest -ErrorAction Stop
+            $copied++
+        } catch {
+            Write-Host "[WARN] Could not copy steam_settings file: $_"
+        }
+    }
+}
+if ($targets.Count -gt 0) {
+    Write-Host "[INFO] _ColdClient\steam_settings mirrored into $($targets.Count) other steam_settings folder(s), $copied new file(s), nothing overwritten."
+}
 
 # ---------------------------------------------------------------------------
 # Step 9 (MANDATORY): "UserData symbolic link for D tokens.ps1" - creates a
