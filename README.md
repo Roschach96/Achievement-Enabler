@@ -131,12 +131,13 @@ cause a false positive):
   is already cracked and the script can't safely work.)
   Not found → shows a prompt:
   ```
-  Do you want to use the script for a Clean Steam Files/RUNE game or for a voices38 release game?
+  Please select the Steam release you are using for this game:
     1 - Clean Steam Files / RUNE Steam release
     2 - voices38 Steam release
+    3 - Hypervisor Steam release
   ```
   Option 1 runs fully automatically as it expects uncracked, unmodified, original Steam
-  game files. RUNE releases are handled by the same option: the game folder is
+  game files or RUNE releases are handled by the same option: the game folder is
   searched recursively for `*.rne` files (RUNE's renamed originals). For each one,
   the cracked counterpart with the same base name (e.g. `steam_api64.dll`,
   `Resonance.exe`) is renamed to `.crk`, and the `.rne` gets the counterpart's
@@ -148,6 +149,13 @@ cause a false positive):
   is created) the script renames the original loader DLL aside, pauses for
   the user to apply the crack files, then removes the crack's unneeded files
   and restores the original loader DLL from backup.
+
+  Option 3 pauses right away and asks the user to apply the Hypervisor files
+  to the game folder, then waits until the user presses Enter.
+  After that it continues exactly like option 1 but will look for potentially
+  faulty achievement-related files from the Hypervisor files and delete them.
+  The deleted files' settings will be handled by the global settings folder,
+  "%AppData%\GSE Saves\settings".
 
 ## How adapter auto-detection works
 
