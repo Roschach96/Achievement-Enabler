@@ -396,14 +396,14 @@ if "%GSE_TAG%"=="2026_02_16" (
         echo [WARNING]   !GEC_EXE!
         echo.
         echo   1 - Roschach96's version ^(Overwrite the .exe^)
-        echo   2 - CHESIRE's version ^(Overwrite all files^)
+        echo   2 - CHESIRE's version ^(Open the pixeldrain link from the LATEST post in the search results and Overwrite all files^)
         echo   3 - Both
         choice /C 123 /N /M "Which link do you want to open? (1-3): "
         if errorlevel 3 (
             start "" "https://cs.rin.ru/forum/viewtopic.php?p=3539220#p3539220"
-            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3548848#p3548848"
+            start "" "https://cs.rin.ru/forum/search.php?st=0&sk=t&sd=d&sr=posts&keywords=+pixeldrain&author_id=812654"
         ) else if errorlevel 2 (
-            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3548848#p3548848"
+            start "" "https://cs.rin.ru/forum/search.php?st=0&sk=t&sd=d&sr=posts&keywords=+pixeldrain&author_id=812654"
         ) else (
             start "" "https://cs.rin.ru/forum/viewtopic.php?p=3539220#p3539220"
         )

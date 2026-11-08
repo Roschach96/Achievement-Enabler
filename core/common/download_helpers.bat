@@ -70,9 +70,11 @@ set "GBE_SKIP_EX=0"
 set "GSE_SKIP_EX=0"
 set "GBE_TAG="
 set "GSE_TAG="
+set "GBE_UNREACHABLE=0"
+set "GSE_UNREACHABLE=0"
 
 set "GBE_CACHE_DIR=%FCT_CACHE_DIR%"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$h=@{'User-Agent'='AchievementEnablerSetup'}; $lines=@(); function Get-LatestTag($owner,$repo) { try { $r=Invoke-RestMethod -Headers $h -Uri ('https://api.github.com/repos/{0}/{1}/releases/latest' -f $owner,$repo); $t=if($r.tag_name){$r.tag_name}else{$r.name}; return $t.Split([IO.Path]::GetInvalidFileNameChars()) -join '_' } catch { return $null } }; function Test-CachedTag($root,$repo,$tag,$extractedName) { if(-not $tag){return $false}; $d=Join-Path $root (Join-Path $repo $tag); $extracted=Join-Path $d $extractedName; if(-not(Test-Path -LiteralPath $extracted)){return $false}; return [bool](Get-ChildItem -LiteralPath $extracted -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1) }; $gbeLatest=Get-LatestTag 'Detanup01' 'gbe_fork'; $gseLatest=Get-LatestTag 'alex47exe' 'gse_fork_tools'; $gbeOk=((Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'vs22\release') -and (Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'vs26\release')); $gseOk=Test-CachedTag $env:GBE_CACHE_DIR 'gse_fork_tools' $gseLatest 'generate_emu_config'; Write-Host ('[INFO] GBE Fork  - latest: {0}  cached: {1}' -f $(if($gbeLatest){$gbeLatest}else{'unknown'}),$(if($gbeOk){'yes'}else{'no'})); Write-Host ('[INFO] GSE Tools - latest: {0}  cached: {1}' -f $(if($gseLatest){$gseLatest}else{'unknown'}),$(if($gseOk){'yes'}else{'no'})); if($gbeOk){$lines+='set GBE_SKIP_DL=1'; $lines+='set GBE_SKIP_EX=1'; $lines+=('set GBE_TAG='+$gbeLatest); $lines+=('set GBE_TAG_VS22='+$gbeLatest); $lines+=('set GBE_TAG_VS26='+$gbeLatest)}; if($gseOk){$lines+='set GSE_SKIP_DL=1'; $lines+='set GSE_SKIP_EX=1'; $lines+=('set GSE_TAG='+$gseLatest)}; if($lines){[System.IO.File]::WriteAllLines($env:TEMP+'\gbe_skip.cmd',$lines,[System.Text.Encoding]::ASCII)}"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$h=@{'User-Agent'='AchievementEnablerSetup'}; $lines=@(); function Get-LatestTag($owner,$repo) { try { $r=Invoke-RestMethod -Headers $h -TimeoutSec 15 -Uri ('https://api.github.com/repos/{0}/{1}/releases/latest' -f $owner,$repo); $t=if($r.tag_name){$r.tag_name}else{$r.name}; return $t.Split([IO.Path]::GetInvalidFileNameChars()) -join '_' } catch { return $null } }; function Test-CachedTag($root,$repo,$tag,$extractedName) { if(-not $tag){return $false}; $d=Join-Path $root (Join-Path $repo $tag); $extracted=Join-Path $d $extractedName; if(-not(Test-Path -LiteralPath $extracted)){return $false}; return [bool](Get-ChildItem -LiteralPath $extracted -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1) }; $gbeLatest=Get-LatestTag 'Detanup01' 'gbe_fork'; $gseLatest=Get-LatestTag 'alex47exe' 'gse_fork_tools'; $gbeOk=((Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'vs22\release') -and (Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'vs26\release')); $gseOk=Test-CachedTag $env:GBE_CACHE_DIR 'gse_fork_tools' $gseLatest 'generate_emu_config'; Write-Host ('[INFO] GBE Fork  - latest: {0}  cached: {1}' -f $(if($gbeLatest){$gbeLatest}else{'unknown'}),$(if($gbeOk){'yes'}else{'no'})); Write-Host ('[INFO] GSE Tools - latest: {0}  cached: {1}' -f $(if($gseLatest){$gseLatest}else{'unknown'}),$(if($gseOk){'yes'}else{'no'})); if($gbeOk){$lines+='set GBE_SKIP_DL=1'; $lines+='set GBE_SKIP_EX=1'; $lines+=('set GBE_TAG='+$gbeLatest); $lines+=('set GBE_TAG_VS22='+$gbeLatest); $lines+=('set GBE_TAG_VS26='+$gbeLatest)}; if($gseOk){$lines+='set GSE_SKIP_DL=1'; $lines+='set GSE_SKIP_EX=1'; $lines+=('set GSE_TAG='+$gseLatest)}; if(-not $gbeLatest){$lines+='set GBE_UNREACHABLE=1'}; if(-not $gseLatest){$lines+='set GSE_UNREACHABLE=1'}; if($lines){[System.IO.File]::WriteAllLines($env:TEMP+'\gbe_skip.cmd',$lines,[System.Text.Encoding]::ASCII)}"
 
 if exist "%TEMP%\gbe_skip.cmd" (
     call "%TEMP%\gbe_skip.cmd"
@@ -83,6 +85,14 @@ if exist "%FCT_CACHE_DIR%\MissingLoader.txt" (
     echo [WARN] MissingLoader.txt found - forcing GBE Fork re-download/re-extract regardless of cached version.
     set "GBE_SKIP_DL=0"
     set "GBE_SKIP_EX=0"
+)
+
+set "FCT_UNREACHABLE=0"
+if "%GBE_UNREACHABLE%"=="1" set "FCT_UNREACHABLE=1"
+if "%GSE_UNREACHABLE%"=="1" set "FCT_UNREACHABLE=1"
+if "%FCT_UNREACHABLE%"=="1" (
+    call :OfflinePrompt
+    if errorlevel 1 exit /b 1
 )
 
 if "%GBE_SKIP_DL%"=="1" echo [INFO] GBE Fork is up to date and already cached - skipping.
@@ -206,6 +216,149 @@ if errorlevel 1 (
     exit /b 1
 )
 del "%GSE_TOOLS_ARCHIVE_PATH%" >nul 2>&1
+exit /b 0
+
+REM ==========================================================================
+REM :OfflinePrompt / :FindCachedTags / :OfflineGuide - internal-only helpers
+REM used by :FetchCoreTools when the GitHub "latest release" lookup failed
+REM for GBE Fork and/or GSE Tools (GBE_UNREACHABLE / GSE_UNREACHABLE = 1).
+REM
+REM   cached copy found -> 1 use cached, 2 open GitHub + guide, 3 exit
+REM   no cached copy    -> 1 open GitHub + guide, 2 exit
+REM
+REM After the guide the user can re-check the cache; a valid copy found then
+REM is used straight away. Returns errorlevel 1 if the user chose to exit.
+REM ==========================================================================
+:OfflinePrompt
+set "OP_AFTER_GUIDE=0"
+echo.
+if "%GBE_UNREACHABLE%"=="1" echo [WARN] Could not reach GitHub to check the latest GBE Fork release.
+if "%GSE_UNREACHABLE%"=="1" echo [WARN] Could not reach GitHub to check the latest GSE Tools release.
+:op_recheck
+call :FindCachedTags
+set "OP_CACHE_OK=1"
+if "%GBE_UNREACHABLE%"=="1" if not defined OP_GBE_CACHED set "OP_CACHE_OK=0"
+if "%GSE_UNREACHABLE%"=="1" if not defined OP_GSE_CACHED set "OP_CACHE_OK=0"
+echo.
+if "%OP_CACHE_OK%"=="1" goto :op_have_cache
+if "%OP_AFTER_GUIDE%"=="1" echo [WARN] Still no valid cached copy found - check the folder layout in the guide.
+echo No usable cached version was found.
+echo   1. Open the GitHub release page(s) with an install guide
+echo   2. Exit
+choice /C 12 /N /M "Select an option (1-2): "
+if errorlevel 2 goto :op_exit
+goto :op_github
+
+:op_have_cache
+if "%GBE_UNREACHABLE%"=="1" echo [INFO] Cached GBE Fork found:  %OP_GBE_CACHED%
+if "%GSE_UNREACHABLE%"=="1" echo [INFO] Cached GSE Tools found: %OP_GSE_CACHED%
+if "%OP_AFTER_GUIDE%"=="1" goto :op_use_cache
+echo   1. Use the cached version
+echo   2. Open the GitHub release page(s) with an install guide
+echo   3. Exit
+choice /C 123 /N /M "Select an option (1-3): "
+if errorlevel 3 goto :op_exit
+if errorlevel 2 goto :op_github
+
+:op_use_cache
+if not "%GBE_UNREACHABLE%"=="1" goto :op_use_gse
+set "GBE_SKIP_DL=1"
+set "GBE_SKIP_EX=1"
+set "GBE_TAG=%OP_GBE_CACHED%"
+set "GBE_TAG_VS22=%OP_GBE_CACHED%"
+set "GBE_TAG_VS26=%OP_GBE_CACHED%"
+echo [INFO] Using cached GBE Fork %OP_GBE_CACHED%.
+:op_use_gse
+if not "%GSE_UNREACHABLE%"=="1" exit /b 0
+set "GSE_SKIP_DL=1"
+set "GSE_SKIP_EX=1"
+set "GSE_TAG=%OP_GSE_CACHED%"
+echo [INFO] Using cached GSE Tools %OP_GSE_CACHED%.
+exit /b 0
+
+:op_github
+if "%GBE_UNREACHABLE%"=="1" start "" "https://github.com/Detanup01/gbe_fork/releases/latest"
+if "%GSE_UNREACHABLE%"=="1" start "" "https://github.com/alex47exe/gse_fork_tools/releases/latest"
+call :OfflineGuide
+set "OP_AFTER_GUIDE=1"
+echo   1. Re-check the cache (after extracting the files)
+echo   2. Exit
+choice /C 12 /N /M "Select an option (1-2): "
+if errorlevel 2 goto :op_exit
+goto :op_recheck
+
+:op_exit
+echo [INFO] Exiting at user request.
+exit /b 1
+
+REM Offline cache scan: newest tag folder (by LastWriteTime) whose expected
+REM sub-folders exist and contain files. Same rule as Test-CachedTag above.
+REM Sets OP_GBE_CACHED / OP_GSE_CACHED (empty if none).
+:FindCachedTags
+set "OP_GBE_CACHED="
+set "OP_GSE_CACHED="
+set "OP_CMD=%TEMP%\ae_cached_tags_%RANDOM%.cmd"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$root=$env:FCT_CACHE_DIR; $q=[char]34; function Test-Sub($repo,$tag,$sub) { $p=Join-Path (Join-Path (Join-Path $root $repo) $tag) $sub; if(-not(Test-Path -LiteralPath $p)){return $false}; return [bool](Get-ChildItem -LiteralPath $p -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1) }; function Get-Newest($repo,$subs) { $b=Join-Path $root $repo; if(-not(Test-Path -LiteralPath $b)){return $null}; foreach($d in @(Get-ChildItem -LiteralPath $b -Directory -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)) { $ok=$true; foreach($s in $subs){ if(-not(Test-Sub $repo $d.Name $s)){$ok=$false; break} }; if($ok){return $d.Name} }; return $null }; $l=@(); $g=Get-Newest 'gbe_fork' @('vs22\release','vs26\release'); if($g){$l+=('set '+$q+'OP_GBE_CACHED='+$g+$q)}; $t=Get-Newest 'gse_fork_tools' @('generate_emu_config'); if($t){$l+=('set '+$q+'OP_GSE_CACHED='+$t+$q)}; if($l){[System.IO.File]::WriteAllLines($env:OP_CMD,$l,[System.Text.Encoding]::ASCII)}"
+if exist "%OP_CMD%" call "%OP_CMD%"
+del "%OP_CMD%" >nul 2>&1
+set "OP_CMD="
+exit /b 0
+
+REM Step-by-step manual install guide matching the layout :ExtractGbe /
+REM :ExtractGse produce. Only shows the section(s) for unreachable tools.
+:OfflineGuide
+set "OG_7ZR="
+for /f "delims=" %%F in ('dir /S /B "%FCT_CACHE_DIR%\7zip\7zr.exe" 2^>nul') do set "OG_7ZR=%%F"
+echo.
+echo ==========================================================================
+echo  MANUAL INSTALL GUIDE - match Achievement Enabler's cache layout
+echo ==========================================================================
+echo  Cache folder:  %FCT_CACHE_DIR%
+echo  [TAG] below = the release tag shown at the top of the GitHub release
+echo  page, e.g. release-2026_09_27. Characters not allowed in folder names
+echo  must be replaced with _ .
+echo.
+echo  Tip: add %SystemDrive%\steamcmd to your antivirus exceptions BEFORE
+echo  extracting, or the steamclient loader files may get quarantined.
+echo.
+if defined OG_7ZR echo  To extract .7z files you can use 7-Zip, or the cached 7zr.exe:
+if defined OG_7ZR echo    "%OG_7ZR%" x "ARCHIVE.7z" -o"TARGET FOLDER"
+if not defined OG_7ZR echo  To extract .7z files you need 7-Zip: https://www.7-zip.org/
+echo.
+if not "%GBE_UNREACHABLE%"=="1" goto :og_gse
+echo  --- GBE Fork  [github.com/Detanup01/gbe_fork] -------------------------
+echo   1. Under "Assets", download BOTH:
+echo        emu-win-release-vs22.7z
+echo        emu-win-release-vs26.7z
+echo   2. Create these two folders:
+echo        %FCT_CACHE_DIR%\gbe_fork\[TAG]\vs22
+echo        %FCT_CACHE_DIR%\gbe_fork\[TAG]\vs26
+echo   3. Extract emu-win-release-vs22.7z into the vs22 folder,
+echo      and emu-win-release-vs26.7z into the vs26 folder.
+echo   4. Check the result - it must look exactly like this:
+echo        ...\gbe_fork\[TAG]\vs22\release\regular\x64\
+echo        ...\gbe_fork\[TAG]\vs22\release\steamclient_experimental\
+echo        ...\gbe_fork\[TAG]\vs26\release\regular\x64\
+echo      NOT ...\vs22\release\release\  and NOT ...\vs22\emu-win-release-vs22\release\
+echo.
+:og_gse
+if not "%GSE_UNREACHABLE%"=="1" goto :og_end
+echo  --- GSE Tools  [github.com/alex47exe/gse_fork_tools] -----------------
+echo   1. Under "Assets", download:
+echo        gen_emu_cfg-Windows-Release.7z
+echo   2. Create this folder:
+echo        %FCT_CACHE_DIR%\gse_fork_tools\[TAG]
+echo   3. Extract gen_emu_cfg-Windows-Release.7z into it.
+echo   4. Check the result - it must look exactly like this:
+echo        ...\gse_fork_tools\[TAG]\generate_emu_config\generate_emu_config.exe
+echo        ...\gse_fork_tools\[TAG]\parse_achievements_schema\
+echo        ...\gse_fork_tools\[TAG]\parse_controller_vdf\
+echo.
+:og_end
+echo  When done, come back here and press 1 to re-check.
+echo ==========================================================================
+echo.
+set "OG_7ZR="
 exit /b 0
 
 REM ==========================================================================
