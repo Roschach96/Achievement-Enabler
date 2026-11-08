@@ -415,6 +415,12 @@ if "%GSE_TAG%"=="2026_02_16" (
 )
 :skip_core_tools
 
+REM Every launch: enforce disable_lan_only=1 / offline=0 in the global
+REM %AppData%\GSE Saves\settings\configs.main.ini (created from the cached
+REM GBE Fork configs.main.EXAMPLE.ini if it doesn't exist yet), and delete
+REM any configs.main.ini inside the game folder (except under _ColdClient).
+powershell -NoProfile -ExecutionPolicy Bypass -File "%COMMON_DIR%\ensure_gse_global_settings.ps1" -CacheDir "%GBE_CACHE_DIR%" -Tag "%GBE_SEL_TAG%" -Variant "%GBE_SELECTED_VARIANT%" -GameFolder "%gameFolder%"
+
 REM ========================================
 REM STEP 3: Throwaway Steam credentials for generate_emu_config
 REM (Steam-schema only - GOG has no Steam achievement schema to fetch, so
