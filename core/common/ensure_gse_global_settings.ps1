@@ -20,8 +20,13 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # Delete any local configs.main.ini in the game folder (excluding _ColdClient),
-# so it can't override the global settings.
+# so it can't override the global settings. The folders it was deleted from
+# are listed in _ae_deleted_cfg_dirs.txt so steam_coldclient\write_config.ps1
+# can later copy achievements.json + img from _ColdClient\steam_settings there.
 if ($GameFolder -and (Test-Path -LiteralPath $GameFolder)) {
+    $deletedListFile = Join-Path $GameFolder '_ae_deleted_cfg_dirs.txt'
+    if (Test-Path -LiteralPath $deletedListFile) { Remove-Item -LiteralPath $deletedListFile -Force -ErrorAction SilentlyContinue }
+    $deletedDirs = New-Object System.Collections.Generic.List[string]
     $stack = New-Object System.Collections.Generic.Stack[string]
     $stack.Push($GameFolder)
     while ($stack.Count -gt 0) {
@@ -34,12 +39,20 @@ if ($GameFolder -and (Test-Path -LiteralPath $GameFolder)) {
                     try {
                         Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop
                         Write-Host ('[INFO] Deleted local configs.main.ini: {0}' -f $_.FullName)
+                        if (-not $deletedDirs.Contains($_.DirectoryName)) { $deletedDirs.Add($_.DirectoryName) }
                     } catch {
                         Write-Host ('[WARN] Could not delete {0}: {1}' -f $_.FullName, $_.Exception.Message)
                     }
                 }
             }
         } catch { }
+    }
+    if ($deletedDirs.Count -gt 0) {
+        try {
+            [System.IO.File]::WriteAllLines($deletedListFile, $deletedDirs.ToArray(), (New-Object System.Text.UTF8Encoding($false)))
+        } catch {
+            Write-Host ('[WARN] Could not write {0}: {1}' -f $deletedListFile, $_.Exception.Message)
+        }
     }
 }
 

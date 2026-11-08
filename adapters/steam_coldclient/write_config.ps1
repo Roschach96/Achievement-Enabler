@@ -135,6 +135,32 @@ if ((Test-Path -LiteralPath $achievementsJson) -and (Test-Path -LiteralPath $per
     & $percentScript -AppId $appId -AchievementsJsonPath $achievementsJson -InjectInPlace
 }
 
+# ── Step 4b: mirror achievements.json + img into every folder a local ──────
+# configs.main.ini was deleted from (list written by ensure_gse_global_settings.ps1)
+$deletedListFile = Join-Path $gameFolder '_ae_deleted_cfg_dirs.txt'
+if (Test-Path -LiteralPath $deletedListFile) {
+    $srcImg = Join-Path $steamSettings 'img'
+    foreach ($destDir in @(Get-Content -LiteralPath $deletedListFile -Encoding UTF8 | Where-Object { $_.Trim() })) {
+        try {
+            if (-not (Test-Path -LiteralPath $destDir)) {
+                New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+            }
+            if (Test-Path -LiteralPath $achievementsJson) {
+                Copy-Item -LiteralPath $achievementsJson -Destination $destDir -Force
+            }
+            if (Test-Path -LiteralPath $srcImg) {
+                $destImg = Join-Path $destDir 'img'
+                if (Test-Path -LiteralPath $destImg) { Remove-Item -LiteralPath $destImg -Recurse -Force }
+                Copy-Item -LiteralPath $srcImg -Destination $destImg -Recurse -Force
+            }
+            Write-Host "[INFO] achievements.json + img copied into: $destDir"
+        } catch {
+            Write-Host "[WARN] Could not copy achievements.json/img into ${destDir}: $_"
+        }
+    }
+    Remove-Item -LiteralPath $deletedListFile -Force -ErrorAction SilentlyContinue
+}
+
 # ── Step 5: patch ColdClientLoader.ini ─────────────────────────────────────
 $iniPath = Join-Path $coldClientPath "ColdClientLoader.ini"
 

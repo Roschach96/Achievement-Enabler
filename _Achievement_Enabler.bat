@@ -990,6 +990,7 @@ if exist "parse_controller_vdf"                     rmdir /S /Q "parse_controlle
 
 if exist "%gameAppID%_manifest.txt"                 del /Q "%gameAppID%_manifest.txt"
 if exist "%gameAppID%_launch_args_debug.log"        del /Q "%gameAppID%_launch_args_debug.log"
+if exist "_ae_deleted_cfg_dirs.txt"                 del /Q "_ae_deleted_cfg_dirs.txt"
 
 if defined AE_ASSETS_DIR if exist "%AE_ASSETS_DIR%" rmdir /S /Q "%AE_ASSETS_DIR%"
 
