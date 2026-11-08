@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableDelayedExpansion
-set "AE_VERSION=V6.0"
+set "AE_VERSION=V6.1"
 
 REM ============================================================================
 REM DEBUG LOGGING TOGGLE
@@ -343,12 +343,21 @@ if "%AE_ADAPTER_ID%"=="steam_coldclient" (
         exit /b 1
     )
     echo.
-    echo Do you want to use the script for a Clean Steam Files/RUNE game or for a voices38 release game?
+    echo Please select the Steam release you are using for this game:
     echo   1 - Clean Steam Files / RUNE Steam release
     echo   2 - voices38 Steam release
+    echo   3 - Hypervisor Steam release
     echo.
-    choice /C 12 /N /M "Select an option (1-2): "
-    if errorlevel 2 set "VOICES38=1"
+    choice /C 123 /N /M "Select an option (1-3): "
+    if errorlevel 3 (
+        echo.
+        echo [ACTION] Apply the Hypervisor files to the game folder now:
+        echo [ACTION]   %gameFolder%
+        echo.
+        set /p "AE_HVE_DUMMY=Press Enter once the Hypervisor files are applied to continue..."
+    ) else if errorlevel 2 (
+        set "VOICES38=1"
+    )
     echo.
 )
 REM --- RUNE: swap *.rne originals back in (cracked counterpart -> *.crk).
