@@ -12,18 +12,20 @@ REM normal, quiet operation. Detection reads line 1 of this file, so it is
 REM locale-independent (does not rely on the "ECHO is on/off" message).
 REM ============================================================================
 set "AE_DEBUG="
+set "AE_SELF=%~f0"
+set "AE_SELF_DIR=%~dp0"
 for /f "usebackq delims=" %%L in ("%~f0") do set "AE_FIRSTLINE=%%L" & goto :ae_dbg_checked
 :ae_dbg_checked
 set "AE_FL=!AE_FIRSTLINE!"
 echo/!AE_FL!| findstr /i /b /c:"@echo on" >nul && set "AE_DEBUG=1"
 
 if defined AE_DEBUG if not defined AE_LOG_ACTIVE (
-    set "AE_LOG_FILE=%~dp0AE_log.txt"
+    set "AE_LOG_FILE=!AE_SELF_DIR!AE_log.txt"
     set "AE_LOG_ACTIVE=1"
     echo [DEBUG] Debug mode ON - logging this run to "!AE_LOG_FILE!"
     REM Relaunch self; child inherits AE_LOG_ACTIVE so it skips this block and
     REM runs the body. Merge stderr and tee stdout to console + AE_log.txt.
-    cmd /c ""%~f0" %*" 2>&1 | powershell -NoProfile -ExecutionPolicy Bypass -Command "$input | Tee-Object -FilePath $env:AE_LOG_FILE"
+    cmd /c ""!AE_SELF!" %*" 2>&1 | powershell -NoProfile -ExecutionPolicy Bypass -Command "$input | Tee-Object -FilePath $env:AE_LOG_FILE"
     exit /b !errorlevel!
 )
 
@@ -352,7 +354,7 @@ if "%AE_ADAPTER_ID%"=="steam_coldclient" (
     if errorlevel 3 (
         echo.
         echo [ACTION] Apply the Hypervisor files to the game folder now:
-        echo [ACTION]   %gameFolder%
+        echo [ACTION]   !gameFolder!
         echo.
         set /p "AE_HVE_DUMMY=Press Enter once the Hypervisor files are applied to continue..."
     ) else if errorlevel 2 (
