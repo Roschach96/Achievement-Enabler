@@ -22,7 +22,7 @@ These don't need additional adapter files:
 
 ## Settings
 The settings of Achievement Enabler can be found in the folder below where you can change them:
-"%SystemDrive%\steamcmd\_AchievementEnabler\"
+"%SystemDrive%\steamcmd\\_AchievementEnabler"
 
 ## Layout
 
