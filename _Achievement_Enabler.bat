@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableDelayedExpansion
-set "AE_VERSION=V6.1"
+set "AE_VERSION=V6.2"
 
 REM ============================================================================
 REM DEBUG LOGGING TOGGLE
