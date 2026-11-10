@@ -23,9 +23,7 @@ if defined AE_DEBUG if not defined AE_LOG_ACTIVE (
     set "AE_LOG_FILE=!AE_SELF_DIR!AE_log.txt"
     set "AE_LOG_ACTIVE=1"
     echo [DEBUG] Debug mode ON - logging this run to "!AE_LOG_FILE!"
-    REM Relaunch self; child inherits AE_LOG_ACTIVE so it skips this block and
-    REM runs the body. Merge stderr and tee stdout to console + AE_log.txt.
-    cmd /c ""!AE_SELF!" %*" 2>&1 | powershell -NoProfile -ExecutionPolicy Bypass -Command "$input | Tee-Object -FilePath $env:AE_LOG_FILE"
+    cmd /c ""!AE_SELF!" %*" 2>&1 | powershell -NoProfile -ExecutionPolicy Bypass -Command "$r=[Console]::In; $o=[Console]::Out; $w=New-Object IO.StreamWriter($env:AE_LOG_FILE,$false,(New-Object Text.UTF8Encoding($true))); $w.AutoFlush=$true; $b=New-Object char[] 4096; while(($n=$r.Read($b,0,$b.Length)) -gt 0){ $o.Write($b,0,$n); $o.Flush(); $w.Write($b,0,$n) }; $w.Close()"
     exit /b !errorlevel!
 )
 
