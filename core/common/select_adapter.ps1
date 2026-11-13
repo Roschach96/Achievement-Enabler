@@ -182,6 +182,31 @@ if ($matches.Count -eq 1) {
         }
     }
 
+    # Steam builds (e.g. The Witcher 3) bundle Galaxy64.dll for GOG
+    # cross-progression only. If a Steam API DLL is present and there is no
+    # goggame-*.info (GOG installs always have one in the game root), use the
+    # default (Steam) adapter instead of UniverseLAN.
+    if ($m.Adapter.Id -eq 'gog_universelan') {
+        $steamDefault = @($adapters | Where-Object { $_.IsDefault }) | Select-Object -First 1
+
+        $steamApi = $null
+        foreach ($n in @('steam_api64.dll','steam_api.dll')) {
+            $steamApi = Get-ChildItem -LiteralPath $GameFolder -Recurse -File -Filter $n -Force -ErrorAction SilentlyContinue |
+                Where-Object { -not (Test-Excluded $_.FullName) } |
+                Select-Object -First 1
+            if ($steamApi) { break }
+        }
+
+        $gogInfo = Get-ChildItem -LiteralPath $GameFolder -File -Filter 'goggame-*.info' -Force -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+
+        if ($steamDefault -and $steamApi -and -not $gogInfo) {
+            Write-Host "[INFO] $($steamApi.Name) present and no goggame-*.info - Galaxy DLL is likely cross-progression only; using '$($steamDefault.Name)'."
+            Write-Selection $steamDefault.Id $steamDefault.Name $steamDefault.Dir (Resolve-AssetsDir $steamDefault.Dir $steamDefault.AssetsGlob)
+            exit 0
+        }
+    }
+
     Write-Host "[INFO] Auto-detected adapter '$($m.Adapter.Name)'."
     Write-Selection $m.Adapter.Id $m.Adapter.Name $m.Adapter.Dir $m.AssetsDir
     exit 0
