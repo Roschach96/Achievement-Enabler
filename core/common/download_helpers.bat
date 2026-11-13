@@ -44,8 +44,9 @@ exit /b %DL_ERROR%
 REM ==========================================================================
 REM :FetchCoreTools  <GameFolder>  <CacheDir>
 REM
-REM Downloads/extracts GBE Fork ("release\") and GSE Tools ("generate_emu_config\")
-REM into <GameFolder>, using <CacheDir> as the persistent GitHub download cache.
+REM Downloads/extracts GBE Fork ("release\", GitHub) and GSE Tools
+REM ("generate_emu_config\", CHESIRE's fork from Pixeldrain - see GSE_PD_LIST)
+REM into <GameFolder>, using <CacheDir> as the persistent download cache.
 REM Both adapters (Goldberg and Uplay R2) consume these same two folders, so
 REM this only needs to run once regardless of which adapter is selected.
 REM
@@ -54,6 +55,8 @@ REM ==========================================================================
 :FetchCoreTools
 set "FCT_GAME_FOLDER=%~2"
 set "FCT_CACHE_DIR=%~3"
+REM CHESIRE's generate_emu_config fork: https://pixeldrain.com/l/<GSE_PD_LIST>
+set "GSE_PD_LIST=N77zQFPh"
 
 if not exist "%FCT_CACHE_DIR%" (
     mkdir "%FCT_CACHE_DIR%"
@@ -74,12 +77,36 @@ set "GBE_UNREACHABLE=0"
 set "GSE_UNREACHABLE=0"
 
 set "GBE_CACHE_DIR=%FCT_CACHE_DIR%"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$h=@{'User-Agent'='AchievementEnablerSetup'}; $lines=@(); function Get-LatestTag($owner,$repo) { try { $r=Invoke-RestMethod -Headers $h -TimeoutSec 15 -Uri ('https://api.github.com/repos/{0}/{1}/releases/latest' -f $owner,$repo); $t=if($r.tag_name){$r.tag_name}else{$r.name}; return $t.Split([IO.Path]::GetInvalidFileNameChars()) -join '_' } catch { return $null } }; function Test-CachedTag($root,$repo,$tag,$extractedName) { if(-not $tag){return $false}; $d=Join-Path $root (Join-Path $repo $tag); $extracted=Join-Path $d $extractedName; if(-not(Test-Path -LiteralPath $extracted)){return $false}; return [bool](Get-ChildItem -LiteralPath $extracted -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1) }; $gbeLatest=Get-LatestTag 'Detanup01' 'gbe_fork'; $gseLatest=Get-LatestTag 'alex47exe' 'gse_fork_tools'; $gbeOk=((Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'vs22\release') -and (Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'vs26\release')); $gseOk=Test-CachedTag $env:GBE_CACHE_DIR 'gse_fork_tools' $gseLatest 'generate_emu_config'; Write-Host ('[INFO] GBE Fork  - latest: {0}  cached: {1}' -f $(if($gbeLatest){$gbeLatest}else{'unknown'}),$(if($gbeOk){'yes'}else{'no'})); Write-Host ('[INFO] GSE Tools - latest: {0}  cached: {1}' -f $(if($gseLatest){$gseLatest}else{'unknown'}),$(if($gseOk){'yes'}else{'no'})); if($gbeOk){$lines+='set GBE_SKIP_DL=1'; $lines+='set GBE_SKIP_EX=1'; $lines+=('set GBE_TAG='+$gbeLatest); $lines+=('set GBE_TAG_VS22='+$gbeLatest); $lines+=('set GBE_TAG_VS26='+$gbeLatest)}; if($gseOk){$lines+='set GSE_SKIP_DL=1'; $lines+='set GSE_SKIP_EX=1'; $lines+=('set GSE_TAG='+$gseLatest)}; if(-not $gbeLatest){$lines+='set GBE_UNREACHABLE=1'}; if(-not $gseLatest){$lines+='set GSE_UNREACHABLE=1'}; if($lines){[System.IO.File]::WriteAllLines($env:TEMP+'\gbe_skip.cmd',$lines,[System.Text.Encoding]::ASCII)}"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$h=@{'User-Agent'='AchievementEnablerSetup'}; $lines=@(); function Get-LatestTag($owner,$repo) { try { $r=Invoke-RestMethod -Headers $h -TimeoutSec 15 -Uri ('https://api.github.com/repos/{0}/{1}/releases/latest' -f $owner,$repo); $t=if($r.tag_name){$r.tag_name}else{$r.name}; return $t.Split([IO.Path]::GetInvalidFileNameChars()) -join '_' } catch { return $null } }; function Test-CachedTag($root,$repo,$tag,$extractedName) { if(-not $tag){return $false}; $d=Join-Path $root (Join-Path $repo $tag); $extracted=Join-Path $d $extractedName; if(-not(Test-Path -LiteralPath $extracted)){return $false}; return [bool](Get-ChildItem -LiteralPath $extracted -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1) }; $gbeLatest=Get-LatestTag 'Detanup01' 'gbe_fork'; $gbeOk=((Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'vs22\release') -and (Test-CachedTag $env:GBE_CACHE_DIR 'gbe_fork' $gbeLatest 'vs26\release')); Write-Host ('[INFO] GBE Fork  - latest: {0}  cached: {1}' -f $(if($gbeLatest){$gbeLatest}else{'unknown'}),$(if($gbeOk){'yes'}else{'no'})); if($gbeOk){$lines+='set GBE_SKIP_DL=1'; $lines+='set GBE_SKIP_EX=1'; $lines+=('set GBE_TAG='+$gbeLatest); $lines+=('set GBE_TAG_VS22='+$gbeLatest); $lines+=('set GBE_TAG_VS26='+$gbeLatest)}; if(-not $gbeLatest){$lines+='set GBE_UNREACHABLE=1'}; if($lines){[System.IO.File]::WriteAllLines($env:TEMP+'\gbe_skip.cmd',$lines,[System.Text.Encoding]::ASCII)}"
 
 if exist "%TEMP%\gbe_skip.cmd" (
     call "%TEMP%\gbe_skip.cmd"
     del "%TEMP%\gbe_skip.cmd" >nul 2>&1
 )
+
+REM GSE Tools: newest .7z in the Pixeldrain list. Its upload date (YYYY_MM_DD)
+REM is the tag - cached as <CacheDir>\gse_fork_tools\<tag>\.
+set "GSE_LATEST="
+set "GSE_PD_ID="
+set "GSE_PD_NAME="
+set "GSE_CHECK_CMD=%TEMP%\ae_gse_check_%RANDOM%.cmd"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0pixeldrain_gse.ps1" -Mode Check -ListId "%GSE_PD_LIST%" -ResultCmd "%GSE_CHECK_CMD%"
+if exist "%GSE_CHECK_CMD%" call "%GSE_CHECK_CMD%"
+del "%GSE_CHECK_CMD%" >nul 2>&1
+set "GSE_CHECK_CMD="
+if not defined GSE_LATEST (
+    echo [INFO] GSE Tools - latest: unknown  cached: no
+    set "GSE_UNREACHABLE=1"
+    goto :fct_gse_checked
+)
+set "GSE_TAG=%GSE_LATEST%"
+set "GSE_CACHED_TXT=no"
+dir /S /B /A-D "%FCT_CACHE_DIR%\gse_fork_tools\%GSE_LATEST%\generate_emu_config\*" >nul 2>&1
+if not errorlevel 1 set "GSE_CACHED_TXT=yes"
+if "%GSE_CACHED_TXT%"=="yes" set "GSE_SKIP_DL=1"
+if "%GSE_CACHED_TXT%"=="yes" set "GSE_SKIP_EX=1"
+echo [INFO] GSE Tools - latest: %GSE_LATEST%  cached: %GSE_CACHED_TXT%
+:fct_gse_checked
 
 if exist "%FCT_CACHE_DIR%\MissingLoader.txt" (
     echo [WARN] MissingLoader.txt found - forcing GBE Fork re-download/re-extract regardless of cached version.
@@ -153,19 +180,9 @@ set "GBE_TAG=%GBE_SEL_TAG%"
 echo Copying GBE Fork files to game folder...
 xcopy "%FCT_CACHE_DIR%\gbe_fork\%GBE_SEL_TAG%\%GBE_SELECTED_VARIANT%\release" "%FCT_GAME_FOLDER%\release\" /E /I /Y /Q
 
-if "%GSE_SKIP_DL%"=="0" (
-    echo Downloading GSE Tools archive...
-    call :DownloadGitHubAsset "alex47exe" "gse_fork_tools" "gen_emu_cfg-Windows-Release.7z" "%FCT_CACHE_DIR%"
-    if errorlevel 1 (
-        echo [ERROR] Failed to download GSE Tools archive and no cached backup exists
-        exit /b 1
-    )
-    call set "GSE_TOOLS_ARCHIVE_PATH=%%DL_SELECTED_PATH%%"
-    call :ExtractGse
-    if errorlevel 1 ( exit /b 1 )
-) else (
-    echo [INFO] GSE Tools already extracted - using cached files.
-)
+if "%GSE_SKIP_DL%"=="1" echo [INFO] GSE Tools already extracted - using cached files.
+if "%GSE_SKIP_DL%"=="0" call :FetchGse
+if "%GSE_SKIP_DL%"=="0" if errorlevel 1 exit /b 1
 echo Copying GSE Tools files to game folder...
 xcopy "%FCT_CACHE_DIR%\gse_fork_tools\%GSE_TAG%\generate_emu_config" "%FCT_GAME_FOLDER%\generate_emu_config\" /E /I /Y /Q
 
@@ -216,6 +233,30 @@ if errorlevel 1 (
     exit /b 1
 )
 del "%GSE_TOOLS_ARCHIVE_PATH%" >nul 2>&1
+REM New version is in place - drop every other gse_fork_tools\<tag>\ folder
+REM (incl. the old GitHub 2026_02_16 one).
+for /d %%D in ("%FCT_CACHE_DIR%\gse_fork_tools\*") do if /I not "%%~nxD"=="%GSE_TAG%" (
+    rmdir /S /Q "%%D" >nul 2>&1
+    echo [INFO] Removed old cached version: %%~nxD
+)
+exit /b 0
+
+REM :FetchGse - internal-only. Downloads CHESIRE's archive into
+REM <CacheDir>\gse_fork_tools\<GSE_TAG>\ and extracts it there (:ExtractGse).
+REM Download failure -> falls back to the newest valid cached tag, if any.
+:FetchGse
+echo Downloading GSE Tools ^(CHESIRE's generate_emu_config fork^) from Pixeldrain...
+set "GSE_TOOLS_ARCHIVE_PATH=%FCT_CACHE_DIR%\gse_fork_tools\%GSE_TAG%\%GSE_PD_NAME%"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0pixeldrain_gse.ps1" -Mode Download -FileId "%GSE_PD_ID%" -OutFile "%GSE_TOOLS_ARCHIVE_PATH%"
+if not errorlevel 1 goto :ExtractGse
+rd "%FCT_CACHE_DIR%\gse_fork_tools\%GSE_TAG%" >nul 2>&1
+call :FindCachedTags
+if not defined OP_GSE_CACHED (
+    echo [ERROR] Failed to download GSE Tools from Pixeldrain and no cached copy exists
+    exit /b 1
+)
+echo [WARN] Pixeldrain download failed. Using cached GSE Tools %OP_GSE_CACHED%.
+set "GSE_TAG=%OP_GSE_CACHED%"
 exit /b 0
 
 REM ==========================================================================
@@ -233,7 +274,7 @@ REM ==========================================================================
 set "OP_AFTER_GUIDE=0"
 echo.
 if "%GBE_UNREACHABLE%"=="1" echo [WARN] Could not reach GitHub to check the latest GBE Fork release.
-if "%GSE_UNREACHABLE%"=="1" echo [WARN] Could not reach GitHub to check the latest GSE Tools release.
+if "%GSE_UNREACHABLE%"=="1" echo [WARN] Could not reach Pixeldrain to check the latest GSE Tools upload.
 :op_recheck
 call :FindCachedTags
 set "OP_CACHE_OK=1"
@@ -243,7 +284,7 @@ echo.
 if "%OP_CACHE_OK%"=="1" goto :op_have_cache
 if "%OP_AFTER_GUIDE%"=="1" echo [WARN] Still no valid cached copy found - check the folder layout in the guide.
 echo No usable cached version was found.
-echo   1. Open the GitHub release page(s) with an install guide
+echo   1. Open the download page(s) with an install guide
 echo   2. Exit
 choice /C 12 /N /M "Select an option (1-2): "
 if errorlevel 2 goto :op_exit
@@ -254,7 +295,7 @@ if "%GBE_UNREACHABLE%"=="1" echo [INFO] Cached GBE Fork found:  %OP_GBE_CACHED%
 if "%GSE_UNREACHABLE%"=="1" echo [INFO] Cached GSE Tools found: %OP_GSE_CACHED%
 if "%OP_AFTER_GUIDE%"=="1" goto :op_use_cache
 echo   1. Use the cached version
-echo   2. Open the GitHub release page(s) with an install guide
+echo   2. Open the download page(s) with an install guide
 echo   3. Exit
 choice /C 123 /N /M "Select an option (1-3): "
 if errorlevel 3 goto :op_exit
@@ -278,7 +319,7 @@ exit /b 0
 
 :op_github
 if "%GBE_UNREACHABLE%"=="1" start "" "https://github.com/Detanup01/gbe_fork/releases/latest"
-if "%GSE_UNREACHABLE%"=="1" start "" "https://github.com/alex47exe/gse_fork_tools/releases/latest"
+if "%GSE_UNREACHABLE%"=="1" start "" "https://pixeldrain.com/l/%GSE_PD_LIST%"
 call :OfflineGuide
 set "OP_AFTER_GUIDE=1"
 echo   1. Re-check the cache (after extracting the files)
@@ -343,16 +384,15 @@ echo      NOT ...\vs22\release\release\  and NOT ...\vs22\emu-win-release-vs22\r
 echo.
 :og_gse
 if not "%GSE_UNREACHABLE%"=="1" goto :og_end
-echo  --- GSE Tools  [github.com/alex47exe/gse_fork_tools] -----------------
-echo   1. Under "Assets", download:
-echo        gen_emu_cfg-Windows-Release.7z
-echo   2. Create this folder:
-echo        %FCT_CACHE_DIR%\gse_fork_tools\[TAG]
-echo   3. Extract gen_emu_cfg-Windows-Release.7z into it.
+echo  --- GSE Tools  [pixeldrain.com/l/%GSE_PD_LIST% - CHESIRE's fork] -------
+echo   1. Download the .7z file from the list ^(e.g. win.7z^).
+echo   2. Create this folder, [DATE] = its "Uploaded on" date as YYYY_MM_DD:
+echo        %FCT_CACHE_DIR%\gse_fork_tools\[DATE]
+echo   3. Extract the .7z into it.
 echo   4. Check the result - it must look exactly like this:
-echo        ...\gse_fork_tools\[TAG]\generate_emu_config\generate_emu_config.exe
-echo        ...\gse_fork_tools\[TAG]\parse_achievements_schema\
-echo        ...\gse_fork_tools\[TAG]\parse_controller_vdf\
+echo        ...\gse_fork_tools\[DATE]\generate_emu_config\generate_emu_config.exe
+echo        ...\gse_fork_tools\[DATE]\parse_achievements_schema\
+echo        ...\gse_fork_tools\[DATE]\parse_controller_vdf\
 echo.
 :og_end
 echo  When done, come back here and press 1 to re-check.

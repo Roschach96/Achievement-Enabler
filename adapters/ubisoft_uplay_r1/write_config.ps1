@@ -1,8 +1,8 @@
-# adapters\ubisoft_uplay_r1\write_config.ps1
+﻿# adapters\ubisoft_uplay_r1\write_config.ps1
 #
 # All inputs come in via env vars set by AchievementEnabler.bat:
 #
-#   AE_GAME_FOLDER   - game root (where generate_emu_config\_OUTPUT lives)
+#   AE_GAME_FOLDER   - game root (where generate_emu_config\output lives)
 #   AE_APP_ID        - Steam AppID
 #   AE_ADAPTER_DIR   - full path to adapters\ubisoft_uplay_r1 (this folder)
 #   AE_ASSETS_DIR    - full path to the UplayR1-* assets folder
@@ -75,7 +75,7 @@ foreach ($name in @('upc_r1.ini', 'uplay_r1.ini')) {
 }
 
 # ── Step 2: detect the achievement key prefix from achievements.json ──────
-$gecOut = if ($env:AE_GEC_OUT_DIR) { $env:AE_GEC_OUT_DIR } else { Join-Path $gameFolder "generate_emu_config\_OUTPUT\$appId" }
+$gecOut = if ($env:AE_GEC_OUT_DIR) { $env:AE_GEC_OUT_DIR } else { Join-Path $gameFolder "generate_emu_config\output\$appId" }
 $achievementFile = Join-Path $gecOut "steam_settings\achievements.json"
 $achPrefix = ""
 if (Test-Path -LiteralPath $achievementFile) {
@@ -99,7 +99,7 @@ if (-not $achPrefix) {
 }
 
 # ── Step 3: generate achievements_schema.json (key = <prefix><id>) ────────
-$schemaScript = Join-Path $adapterDir "generate_achievements_schema_v3.ps1"
+$schemaScript = Join-Path $adapterDir "generate_achievements_schema.ps1"
 if (Test-Path -LiteralPath $schemaScript) {
     Push-Location $gameFolder
     try {
@@ -108,7 +108,7 @@ if (Test-Path -LiteralPath $schemaScript) {
         Pop-Location
     }
 } else {
-    Write-Host "[WARN] generate_achievements_schema_v3.ps1 not found next to adapter - skipping schema generation."
+    Write-Host "[WARN] generate_achievements_schema.ps1 not found next to adapter - skipping schema generation."
 }
 
 # ── Step 4: copy the matching loader DLL + INI (and the schema) from assets ─

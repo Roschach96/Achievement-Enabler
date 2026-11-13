@@ -1,4 +1,4 @@
-# adapters\steam_coldclient\write_config.ps1
+﻿# adapters\steam_coldclient\write_config.ps1
 #
 # Builds the _ColdClient folder for one game: copies the base Goldberg
 # template, drops in the generated achievement data, injects global unlock
@@ -39,7 +39,7 @@ if ($missing.Count -gt 0) {
 }
 
 $steamSettings = Join-Path $coldClientPath "steam_settings"
-$outputDir = if ($env:AE_GEC_OUT_DIR) { $env:AE_GEC_OUT_DIR } else { Join-Path $gameFolder "generate_emu_config\_OUTPUT\$appId" }
+$outputDir = if ($env:AE_GEC_OUT_DIR) { $env:AE_GEC_OUT_DIR } else { Join-Path $gameFolder "generate_emu_config\output\$appId" }
 
 # ── Step 1: fresh _ColdClient scaffold from the GBE Fork template ─────────
 if (Test-Path -LiteralPath $coldClientPath) {

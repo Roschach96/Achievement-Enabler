@@ -74,17 +74,13 @@ set "ADAPTERS_ROOT=%TOOLS_DIR%adapters"
 
 goto :main
 
-REM --- Run generate_emu_config with the chosen flag. The -aw build writes its
+REM --- Run generate_emu_config (CHESIRE's fork) with -aw. It writes its
 REM     "output" folder relative to the CURRENT directory, so run it from inside
-REM     generate_emu_config to keep output out of the game root. -acw is unchanged.
+REM     generate_emu_config to keep output out of the game root.
 :RunGec
-if "%GEC_FLAG%"=="-aw" (
-    pushd generate_emu_config
-    call generate_emu_config %GEC_FLAG% %gameAppID%
-    popd
-) else (
-    call generate_emu_config\generate_emu_config %GEC_FLAG% %gameAppID%
-)
+pushd generate_emu_config
+call generate_emu_config -aw %gameAppID%
+popd
 goto :eof
 
 REM ============================================================================
@@ -388,40 +384,6 @@ if errorlevel 1 (
 )
 echo.
 
-REM ========================================
-REM Warn if GSE Tools 2026_02_16 still has the broken generate_emu_config.exe.
-REM Detect by SHA1 of the known-bad build (no marker .txt), so the warning
-REM keeps firing until the file is actually replaced.
-REM ========================================
-if "%GSE_TAG%"=="2026_02_16" (
-    set "GEC_EXE=%SystemDrive%\steamcmd\_GBE fork\gse_fork_tools\2026_02_16\generate_emu_config\generate_emu_config.exe"
-    set "GEC_SHA1="
-    for /f "delims=" %%H in ('powershell -NoProfile -Command "if (Test-Path -LiteralPath '!GEC_EXE!') { (Get-FileHash -LiteralPath '!GEC_EXE!' -Algorithm SHA1).Hash }"') do set "GEC_SHA1=%%H"
-    if /I "!GEC_SHA1!"=="2449D668C1473BDB400AD0B9C853CF7C716AAE76" (
-        echo.
-        echo [WARNING] The cached GSE Tools version ^(2026_02_16^) ships a broken generate_emu_config.exe
-        echo [WARNING] that must be replaced before achievement data can be generated correctly.
-        echo [WARNING] Replace this file with a fixed version:
-        echo [WARNING]   !GEC_EXE!
-        echo.
-        echo   1 - Roschach96's version ^(Overwrite the .exe^)
-        echo   2 - CHESIRE's version ^(Open the pixeldrain link from the LATEST post in the search results and Overwrite all files^)
-        echo   3 - Both
-        choice /C 123 /N /M "Which link do you want to open? (1-3): "
-        if errorlevel 3 (
-            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3539220#p3539220"
-            start "" "https://cs.rin.ru/forum/search.php?st=0&sk=t&sd=d&sr=posts&keywords=+pixeldrain&author_id=812654"
-        ) else if errorlevel 2 (
-            start "" "https://cs.rin.ru/forum/search.php?st=0&sk=t&sd=d&sr=posts&keywords=+pixeldrain&author_id=812654"
-        ) else (
-            start "" "https://cs.rin.ru/forum/viewtopic.php?p=3539220#p3539220"
-        )
-        echo.
-        echo Please replace the file, then rerun this script.
-        pause
-        exit /b 1
-    )
-)
 :skip_core_tools
 
 REM Every launch: enforce disable_lan_only=1 / offline=0 in the global
@@ -706,32 +668,8 @@ REM handles achievements separately.)
 REM ========================================
 if "%AE_STEAM_SCHEMA%"=="0" goto :skip_gen_emu_config
 
-REM Pick generate_emu_config flag:
-REM   GSE Tools newer than 2026_02_16 -> -acw
-REM   else the one known-good build    -> -acw (by SHA1)
-REM   else                             -> -aw
-set "GEC_EXE=%GBE_CACHE_DIR%\gse_fork_tools\%GSE_TAG%\generate_emu_config\generate_emu_config.exe"
-set "GEC_FLAG=-aw"
-
-REM Date tags (YYYY_MM_DD) compare numerically once underscores are stripped.
-set "GSE_TAG_NUM=%GSE_TAG:_=%"
-set "GEC_TAG_IS_NUM=1"
-for /f "delims=0123456789" %%C in ("!GSE_TAG_NUM!") do set "GEC_TAG_IS_NUM=0"
-if "!GSE_TAG_NUM!"=="" set "GEC_TAG_IS_NUM=0"
-if "!GEC_TAG_IS_NUM!"=="1" if !GSE_TAG_NUM! GTR 20260216 set "GEC_FLAG=-acw"
-
-REM Older/equal tags: fall back to the known-good build's SHA1.
-if "!GEC_FLAG!"=="-aw" (
-    for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash -LiteralPath '%GEC_EXE%' -Algorithm SHA1).Hash"`) do set "GEC_SHA1=%%H"
-    if /I "!GEC_SHA1!"=="6DBBF28606E0D904C65C19378C0B2203597C21CF" set "GEC_FLAG=-acw"
-)
-
-REM Output location differs by flag: -acw -> generate_emu_config\_OUTPUT, -aw -> generate_emu_config\output
-if "%GEC_FLAG%"=="-aw" (
-    set "GEC_OUT_DIR=generate_emu_config\output\%gameAppID%"
-) else (
-    set "GEC_OUT_DIR=generate_emu_config\_OUTPUT\%gameAppID%"
-)
+REM generate_emu_config -aw output: generate_emu_config\output\<appid>
+set "GEC_OUT_DIR=generate_emu_config\output\%gameAppID%"
 
 call :RunGec
 set "GEC_STEAM_SETTINGS=!GEC_OUT_DIR!\steam_settings"
@@ -772,20 +710,8 @@ if defined TOP_OWNERS_UPDATED (
     if "%AE_ACHIEVEMENTS_MISSING%"=="1" echo [WARN] SteamLadder fallback list was not ready; continuing without it.
 )
 
-REM Achievement Watcher schema source differs by flag:
-REM   -acw packs it in steam_misc\extra_acw\extra_acw.zip (extract it)
-REM   -aw ships it already extracted under "Achievement Watcher\steam_cache\schema"
-if "%GEC_FLAG%"=="-aw" (
-    set "GEC_SCHEMA_SRC=!GEC_OUT_DIR!\Achievement Watcher\steam_cache\schema"
-) else (
-    set "zipFile=!GEC_OUT_DIR!\steam_misc\extra_acw\extra_acw.zip"
-    set "acwExtractDir=!GEC_OUT_DIR!\steam_misc\extra_acw\_extracted"
-    if exist "!zipFile!" (
-        echo Extracting extra_acw.zip...
-        powershell -Command "Expand-Archive -LiteralPath '!zipFile!' -DestinationPath '!acwExtractDir!' -Force"
-    )
-    set "GEC_SCHEMA_SRC=!acwExtractDir!\steam_cache\schema"
-)
+REM Achievement Watcher schema: -aw ships it extracted under "Achievement Watcher\steam_cache\schema"
+set "GEC_SCHEMA_SRC=!GEC_OUT_DIR!\Achievement Watcher\steam_cache\schema"
 :skip_gen_emu_config
 echo.
 

@@ -8,7 +8,7 @@ if (-not $appID) {
 }
 
 # Location of achievement file
-$gecOut = if ($env:AE_GEC_OUT_DIR) { $env:AE_GEC_OUT_DIR } else { ".\generate_emu_config\_OUTPUT\$appID" }
+$gecOut = if ($env:AE_GEC_OUT_DIR) { $env:AE_GEC_OUT_DIR } else { ".\generate_emu_config\output\$appID" }
 $achievementFile = Join-Path $gecOut "steam_settings\achievements.json"
 
 if (Test-Path $achievementFile) {
